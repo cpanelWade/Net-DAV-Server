@@ -1,5 +1,14 @@
 CHANGES file for Net::DAV::Server
 
+1.25 Sat Mar 26 07:06:03 CST 2005
+  - finished the support for parsing PROPFIND request bodies - for
+    retreiving property names, named properties, or all properties.
+  - tweaked some things to support publishing DAV using
+    POE::Component::Server::HTTP (bug #11821)
+  - a little more magic to make wide character file names work
+  - all above patches by Jack/ms419
+  - added POD test
+
 1.24 Tue Mar  8 18:58:05 EST 2005
   - included big patch from Mark A. Hershberger, so that
     Net::DAV::Server passes more litmus tests

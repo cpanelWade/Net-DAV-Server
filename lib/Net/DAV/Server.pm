@@ -2,7 +2,7 @@ package Net::DAV::Server;
 use strict;
 use warnings;
 use File::Slurp;
-use Encode qw(encode_utf8);
+use Encode;
 use File::Find::Rule::Filesys::Virtual;
 use HTTP::Date;
 use HTTP::Headers;
@@ -14,21 +14,24 @@ use URI::Escape;
 use XML::LibXML;
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.24';
+our $VERSION = '1.25';
 
-our %implemented = (options => 1,
-		    put     => 1,
-		    get     => 1,
-		    head    => 1,
-		    post    => 1,
-		    delete  => 1,
-		    trace   => 1,
-		    mkcol   => 1,
-		    propfind => 1,
-		    copy    => 1,
-		    lock    => 1,
-		    unlock  => 1,
-		    move    => 1);
+our %implemented = (
+  options  => 1,
+  put      => 1,
+  get      => 1,
+  head     => 1,
+  post     => 1,
+  delete   => 1,
+  trace    => 1,
+  mkcol    => 1,
+  propfind => 1,
+  copy     => 1,
+  lock     => 1,
+  unlock   => 1,
+  move     => 1
+);
+
 sub new {
   my ($class) = @_;
   my $self = {};
@@ -37,55 +40,55 @@ sub new {
 }
 
 sub run {
-  my $self    = shift;
-  my $request = shift;
+  my($self, $request, $response) = @_;
 
-  my $fs = $self->filesys || die "Boom";
+  my $fs = $self->filesys || die 'Boom';
 
   my $method = $request->method;
-  my $path  = uri_unescape($request->uri);
+  my $path  = decode_utf8 uri_unescape $request->uri->path;
 
-  my $headers = HTTP::Headers->new(
-    'Content-Type' => 'text/plain',
-  );
+  if (!defined $response) {
+    $response = HTTP::Response->new;
+  }
 
-  my $response;
   $method = lc $method;
   if($implemented{$method}) {
-    $response = HTTP::Response->new(200, "OK", $headers);
-  $response = $self->$method($request, $response);
-  $response->header('Content-Length' => length($response->content));
+    $response->code(200);
+    $response->message('OK');
+    $response = $self->$method($request, $response);
+    $response->header('Content-Length' => length($response->content));
   } else {
-    warn "$method not implemented";
-    $response = HTTP::Response->new(501 => "Not Implemented"); # Saying it isn't implemented is better than crashing!
+    # Saying it isn't implemented is better than crashing!
+    warn "$method not implemented\n";
+    $response->code(501);
+    $response->message('Not Implemented');
   }
   return $response;
 }
 
 sub options {
   my($self, $request, $response) = @_;
-  no warnings;
-  $response->headers->header('DAV' => [qw(1,2 <http://apache.org/dav/propset/fs/1>)]); # Nautilus freaks out
-  $response->headers->header('MS-Author-Via' => "DAV"); # Nautilus freaks out
-  $response->headers->header('Allow' => join(',', map {uc} keys %implemented));
-  $response->headers->header('Content-Type' => 'httpd/unix-directory');
-  $response->headers->header('Keep-Alive' => 'timeout=15, max=96');
+  $response->header('DAV' => '1,2,<http://apache.org/dav/propset/fs/1>'); # Nautilus freaks out
+  $response->header('MS-Author-Via' => 'DAV'); # Nautilus freaks out
+  $response->header('Allow' => join(',', map {uc} keys %implemented));
+  $response->header('Content-Type' => 'httpd/unix-directory');
+  $response->header('Keep-Alive' => 'timeout=15, max=96');
   return $response;
 }
 
 sub head {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs = $self->filesys;
 
   if ($fs->test("f", $path) && $fs->test("r", $path)) {
     my $fh = $fs->open_read($path);
     $fs->close_read($fh);
-    $response->last_modified($fs->modtime($path)); 
+    $response->last_modified($fs->modtime($path));
   } elsif ($fs->test("d", $path)) {
     # a web browser, then
     my @files = $fs->list($path);
-    $response->header('Content-Type', 'text/html');
+    $response->header('Content-Type' => 'text/html; charset="utf-8"');
   } else {
     $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
   }
@@ -94,38 +97,39 @@ sub head {
 
 sub get {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs = $self->filesys;
 
-  if ($fs->test("f", $path) && $fs->test("r", $path)) {
+  if ($fs->test('f', $path) && $fs->test('r', $path)) {
     my $fh = $fs->open_read($path);
     my $file = join '', <$fh>;
     $fs->close_read($fh);
     $response->content($file);
-    $response->last_modified($fs->modtime($path)); 
-  } elsif ($fs->test("d", $path)) {
+    $response->last_modified($fs->modtime($path));
+  } elsif ($fs->test('d', $path)) {
     # a web browser, then
     my @files = $fs->list($path);
     my $body;
     foreach my $file (@files) {
-      if ($fs->test("d", "$path$file")) {
-	$body .= qq|<a href="$file/">$file/</a><br>\n|;
+      if ($fs->test('d', $path . $file)) {
+        $body .= qq|<a href="$file/">$file/</a><br>\n|;
       } else {
-	$file =~ s{/$}{};
-	$body .= qq|<a href="$file">$file</a><br>\n|;
+        $file =~ s{/$}{};
+        $body .= qq|<a href="$file">$file</a><br>\n|;
       }
     }
-    $response->header('Content-Type', 'text/html');
+    $response->header('Content-Type' => 'text/html; charset="utf-8"');
     $response->content($body);
   } else {
-    $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
+    $response->code(404);
+    $response->message('Not Found');
   }
   return $response;
 }
 
 sub put {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs = $self->filesys;
 
   $response = HTTP::Response->new(201, "CREATED", $response->headers);
@@ -147,8 +151,12 @@ sub _delete_xml {
 
 sub delete {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs = $self->filesys;
+
+  if ($request->uri->fragment) {
+    return HTTP::Response->new(404, "NOT FOUND", $response->headers);
+  }
 
   unless ($fs->test("e", $path)) {
     return HTTP::Response->new(404, "NOT FOUND", $response->headers);
@@ -158,23 +166,21 @@ sub delete {
   my @error;
   foreach my $part (
     grep { $_ !~ m{/\.\.?$} }
-    map { s{/+}{/}g; $_ } 
+    map { s{/+}{/}g; $_ }
     File::Find::Rule::Filesys::Virtual
     ->virtual($fs)
     ->in($path), $path) {
-
-    warn "[delete: $part]\n";
 
     next unless $fs->test("e", $part);
 
     if ($fs->test("f", $part)) {
       push @error,
       _delete_xml($dom, $part)
-	unless $fs->delete($part);
+      unless $fs->delete($part);
     } elsif ($fs->test("d", $part)) {
       push @error,
       _delete_xml($dom, $part)
-	unless $fs->rmdir($part);
+      unless $fs->rmdir($part);
     }
   }
 
@@ -194,7 +200,7 @@ sub delete {
 
 sub copy {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs = $self->filesys;
 
   my $destination = $request->header('Destination');
@@ -207,10 +213,10 @@ sub copy {
   }
 
   # it's a good approximation
-  $depth = 100 if $depth eq 'infinity';
+  $depth = 100 if defined $depth && $depth eq 'infinity';
 
   my @files =
-    map { s{/+}{/}g; $_ } 
+    map { s{/+}{/}g; $_ }
     File::Find::Rule::Filesys::Virtual
    ->virtual($fs)
    ->file
@@ -219,7 +225,7 @@ sub copy {
 
   my @dirs = reverse sort
     grep { $_ !~ m{/\.\.?$} }
-    map { s{/+}{/}g; $_ } 
+    map { s{/+}{/}g; $_ }
     File::Find::Rule::Filesys::Virtual
    ->virtual($fs)
    ->directory
@@ -262,7 +268,7 @@ sub copy {
 
 sub copy_file {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs = $self->filesys;
 
   my $destination = $request->header('Destination');
@@ -278,22 +284,27 @@ sub copy_file {
     $fs->close_read($fh);
     if ($fs->test("f", $destination)) {
       if ($overwrite eq 'T') {
-	$fh = $fs->open_write($destination);
-	print $fh $file;
-	$fs->close_write($fh);
+        $fh = $fs->open_write($destination);
+        print $fh $file;
+        $fs->close_write($fh);
       } else {
-	$response =
-	  HTTP::Response->new(412, "PRECONDITION FAILED", $response->headers);
+        $response->code(412);
+        $response->message('Precondition Failed');
       }
     } else {
-      $fh = $fs->open_write($destination) ||
-	return HTTP::Response->new(409, "CONFLICT", $response->headers);
+      unless ($fh = $fs->open_write($destination)) {
+        $response->code(409);
+        $response->message('Conflict');
+        return $response;
+      }
       print $fh $file;
       $fs->close_write($fh);
-      $response = HTTP::Response->new(201, "CREATED", $response->headers);
+      $response->code(201);
+      $response->message('Created');
     }
   } else {
-    $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
+    $response->code(404);
+    $response->message('Not Found');
   }
   return $response;
 }
@@ -316,7 +327,7 @@ sub move {
 
 sub lock {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs   = $self->filesys;
 
   $fs->lock($path);
@@ -326,7 +337,7 @@ sub lock {
 
 sub unlock {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs   = $self->filesys;
 
   $fs->unlock($path);
@@ -336,124 +347,203 @@ sub unlock {
 
 sub mkcol {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs = $self->filesys;
 
   if ($request->content) {
-    $response = HTTP::Response->new(415, "UNSUPPORTED MEDIA TYPE", $response->headers);
+    $response->code(415);
+    $response->message('Unsupported Media Type');
   } elsif (not $fs->test("e", $path)) {
     $fs->mkdir($path);
     if ($fs->test("d", $path)) {
     } else {
-      $response = HTTP::Response->new(409, "CONFLICT", $response->headers);
+      $response->code(409);
+      $response->message('Conflict');
     }
   } else {
-    $response = HTTP::Response->new(405, "NOT ALLOWED", $response->headers);
+    $response->code(405);
+    $response->message('Method Not Allowed');
   }
   return $response;
 }
 
 sub propfind {
   my($self, $request, $response) = @_;
-  my $path = uri_unescape($request->uri);
+  my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs = $self->filesys;
   my $depth = $request->header('Depth');
 
-  if ($request->headers->header('Content-Length')) {
+  my $reqinfo = 'allprop';
+  my @reqprops;
+  if ($request->header('Content-Length')) {
     my $content = $request->content;
-    my $p = XML::LibXML->new;
+    my $parser = XML::LibXML->new;
+    my $doc;
     eval {
-      my $doc = $p->parse_string($content);
+      $doc = $parser->parse_string($content);
     };
     if ($@) {
-      return HTTP::Response->new(400, "BAD REQUEST", $response->headers);
+      $response->code(400);
+      $response->message('Bad Request');
+      return $response;
+    }
+    #$reqinfo = doc->find('/DAV:propfind/*')->localname;
+    $reqinfo = $doc->find('/*/*')->shift->localname;
+    if ($reqinfo eq 'prop') {
+      #for my $node ($doc->find('/DAV:propfind/DAV:prop/*')) {
+      for my $node ($doc->find('/*/*/*')->get_nodelist) {
+        push @reqprops, [$node->namespaceURI, $node->localname];
+      }
     }
   }
 
-  $response = HTTP::Response->new(207, "Multi-Status", $response->headers);
-  $response->headers->header('Content-Type' => 'text/xml; charset="utf-8"');
-
-  my $dom = XML::LibXML::Document->new("1.0", "utf-8");
-  my $multistatus = $dom->createElement("D:multistatus");
-  $multistatus->setAttribute("xmlns:D", "DAV:");
-
-  $dom->setDocumentElement($multistatus);
-
-  my @files;
-  if ($depth == 1 and $fs->test("d", $path)) {
-    my $p = $path;
-    $p .= '/' unless $p =~ m{/$};
-    @files = map { $p . $_ } $fs->list($path);
-    push @files, $path;
-
-    #  print "@files";
-  } else {
-    return HTTP::Response->new(404, "Not Found", $response->headers)
-      if !$fs->test("e", $path);
-
-    @files = ($path);
+  if (!$fs->test('e', $path)) {
+    $response->code(404);
+    $response->message('Not Found');
+    return $response;
   }
 
-  foreach my $file (@files) {
-    my ($status);
+  $response->code(207);
+  $response->message('Multi-Status');
+  $response->header('Content-Type' => 'text/xml; charset="utf-8"');
 
+  my $doc = XML::LibXML::Document->new('1.0', 'utf-8');
+  my $multistat = $doc->createElement('D:multistatus');
+  $multistat->setAttribute('xmlns:D', 'DAV:');
+  $doc->setDocumentElement($multistat);
+
+  my @paths;
+  if (defined $depth && $depth eq 1 and $fs->test('d', $path)) {
+    my $p = $path;
+    $p .= '/' unless $p =~ m{/$};
+    @paths = map {$p . $_} $fs->list($path);
+    push @paths, $path;
+  } else {
+    @paths = ($path);
+  }
+
+  for my $path (@paths) {
     my (
         $dev,  $ino,   $mode,  $nlink, $uid,     $gid, $rdev,
         $size, $atime, $mtime, $ctime, $blksize, $blocks
-       )
-      = $fs->stat($file);
-    $mtime = time2str($mtime) ;
+    ) = $fs->stat($path);
+    $mtime = time2str($mtime);
     $ctime = time2str($ctime);
-    $size ||= "";
+    $size ||= '';
 
-    if ($fs->test("f", $file)) {
-      $status       = "HTTP/1.1 200 OK";
-    } elsif ($fs->test("d", $file)) {
-      $status       = "HTTP/1.1 200 OK";
+    my $resp = $doc->createElement('D:response');
+    $multistat->addChild($resp);
+    my $href = $doc->createElement('D:href');
+    $href->appendText(File::Spec->catdir(map {uri_escape encode_utf8 $_} File::Spec->splitdir($path)));
+    $resp->addChild($href);
+    my $okprops = $doc->createElement('D:prop');
+    my $nfprops = $doc->createElement('D:prop');
+    my $prop;
+    if ($reqinfo eq 'prop') {
+      my %prefixes = (D => 'DAV:');
+      my $i = 0;
+
+      for my $reqprop (@reqprops) {
+        my ($ns, $name) = @$reqprop;
+        if ($ns eq 'DAV:' && $name eq 'creationdate') {
+          $prop = $doc->createElement('D:creationdate');
+          $prop->appendText($ctime);
+          $okprops->addChild($prop);
+        } elsif ($ns eq 'DAV:' && $name eq 'getcontentlength') {
+          $prop = $doc->createElement('D:getcontentlength');
+          $prop->appendText($size);
+          $okprops->addChild($prop);
+        } elsif ($ns eq 'DAV:' && $name eq 'getcontenttype') {
+          $prop = $doc->createElement('D:getcontenttype');
+          if ($fs->test('d', $path)) {
+            $prop->appendText('httpd/unix-directory');
+          } else {
+            $prop->appendText('httpd/unix-file');
+          }
+          $okprops->addChild($prop);
+        } elsif ($ns eq 'DAV:' && $name eq 'getlastmodified') {
+          $prop = $doc->createElement('D:getlastmodified');
+          $prop->appendText($mtime);
+          $okprops->addChild($prop);
+        } elsif ($ns eq 'DAV:' && $name eq 'resourcetype') {
+          $prop = $doc->createElement('D:resourcetype');
+          if ($fs->test('d', $path)) {
+            my $col = $doc->createElement('D:collection');
+            $prop->addChild($col);
+          }
+          $okprops->addChild($prop);
+        } else {
+          my $prefix = $prefixes{$ns};
+          if (!defined $prefix) {
+            $prefix = 'i' . $i++;
+
+            # mod_dav sets <response> 'xmlns' attribute - whatever
+            #$nfprops->setAttribute("xmlns:$prefix", $ns);
+            $resp->setAttribute("xmlns:$prefix", $ns);
+
+            $prefixes{$ns} = $prefix;
+          }
+
+          $prop = $doc->createElement("$prefix:$name");
+          $nfprops->addChild($prop);
+        }
+      }
+    } elsif ($reqinfo eq 'propname') {
+      $prop = $doc->createElement('D:creationdate');
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getcontentlength');
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getcontenttype');
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getlastmodified');
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:resourcetype');
+      $okprops->addChild($prop);
     } else {
-      $status       = "HTTP/1.1 404 NOT FOUND";
+      $prop = $doc->createElement('D:creationdate');
+      $prop->appendText($ctime);
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getcontentlength');
+      $prop->appendText($size);
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getcontenttype');
+      if ($fs->test('d', $path)) {
+        $prop->appendText('httpd/unix-directory');
+      } else {
+        $prop->appendText('httpd/unix-file');
+      }
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:getlastmodified');
+      $prop->appendText($mtime);
+      $okprops->addChild($prop);
+      $prop = $doc->createElement('D:resourcetype');
+      if ($fs->test('d', $path)) {
+        my $col = $doc->createElement('D:collection');
+        $prop->addChild($col);
+      }
+      $okprops->addChild($prop);
     }
 
-    my $nresponse = $dom->createElement("D:response");
-    $nresponse->setAttribute("xmlns:lp1", "http://apache.org/dav/props/");
-    $multistatus->addChild($nresponse);
-    my $href = $dom->createElement("D:href");
-    $href->appendText(File::Spec->catdir(map {uri_escape encode_utf8 $_} File::Spec->splitdir($file)));
-    $nresponse->addChild($href);
-    my $propstat = $dom->createElement("D:propstat");
-    $nresponse->addChild($propstat);
-    my $prop = $dom->createElement("D:prop");
-    $propstat->addChild($prop);
-    my $creationdate = $dom->createElement("D:creationdate");
-    $creationdate->appendText($ctime);
-    $prop->addChild($creationdate);
-    my $getlastmodified = $dom->createElement("D:getlastmodified");
-    $getlastmodified->appendText($mtime);
-    $prop->addChild($getlastmodified);
-    my $getcontentlength = $dom->createElement("D:getcontentlength");
-    $getcontentlength->appendText($size);
-    $prop->addChild($getcontentlength);
-    my $resourcetype = $dom->createElement("D:resourcetype");
-    if ($fs->test("d", $file)) {
-      my $collection = $dom->createElement("D:collection");
-      $resourcetype->addChild($collection);
-    }
-    $prop->addChild($resourcetype);
-    my $nstatus = $dom->createElement("D:status");
-    $nstatus->appendText($status);
-    $propstat->addChild($nstatus);
-    my $getcontenttype = $dom->createElement("D:getcontenttype");
-
-    if ($fs->test("d", $file)) {
-      $getcontenttype->appendText("httpd/unix-directory");
-    } else {
-      $getcontenttype->appendText("httpd/unix-file");
+    if ($okprops->hasChildNodes) {
+      my $propstat = $doc->createElement('D:propstat');
+      $propstat->addChild($okprops);
+      my $stat = $doc->createElement('D:status');
+      $stat->appendText('HTTP/1.1 200 OK');
+      $propstat->addChild($stat);
+      $resp->addChild($propstat);
     }
 
-    $propstat->addChild($getcontenttype);
+    if ($nfprops->hasChildNodes) {
+      my $propstat = $doc->createElement('D:propstat');
+      $propstat->addChild($nfprops);
+      my $stat = $doc->createElement('D:status');
+      $stat->appendText('HTTP/1.1 404 Not Found');
+      $propstat->addChild($stat);
+      $resp->addChild($propstat);
+    }
   }
 
-  $response->content($dom->toString(1));
+  $response->content($doc->toString(1));
 
   return $response;
 }
