@@ -1,5 +1,12 @@
 CHANGES file for Net::DAV::Server
 
+1.24 Tue Mar  8 18:58:05 EST 2005
+  - included big patch from Mark A. Hershberger, so that
+    Net::DAV::Server passes more litmus tests
+  - remove silly line that stopped cadaver from working
+  - return 201 if moving to a new directory
+  - return 409 if writing to a directory which does not exist
+
 1.23 Thu May 20 10:06:05 BST 2004
   - implemented recursive copy, delete, move using
     File::Find::Rule::Filesys::Virtual

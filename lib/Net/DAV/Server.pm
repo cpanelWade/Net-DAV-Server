@@ -8,13 +8,27 @@ use HTTP::Date;
 use HTTP::Headers;
 use HTTP::Response;
 use HTTP::Request;
+use File::Spec;
 use URI;
 use URI::Escape;
 use XML::LibXML;
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.23';
+our $VERSION = '1.24';
 
+our %implemented = (options => 1,
+		    put     => 1,
+		    get     => 1,
+		    head    => 1,
+		    post    => 1,
+		    delete  => 1,
+		    trace   => 1,
+		    mkcol   => 1,
+		    propfind => 1,
+		    copy    => 1,
+		    lock    => 1,
+		    unlock  => 1,
+		    move    => 1);
 sub new {
   my ($class) = @_;
   my $self = {};
@@ -32,30 +46,49 @@ sub run {
   my $path  = uri_unescape($request->uri);
 
   my $headers = HTTP::Headers->new(
-    'Date'         => time2str(time),
-    'Server'       => 'Net::DAV::Server ' . $VERSION,
     'Content-Type' => 'text/plain',
-    'Connection'   => 'close',
   );
-  my $response = HTTP::Response->new(200, "OK", $headers);
 
+  my $response;
   $method = lc $method;
+  if($implemented{$method}) {
+    $response = HTTP::Response->new(200, "OK", $headers);
   $response = $self->$method($request, $response);
   $response->header('Content-Length' => length($response->content));
+  } else {
+    warn "$method not implemented";
+    $response = HTTP::Response->new(501 => "Not Implemented"); # Saying it isn't implemented is better than crashing!
+  }
   return $response;
 }
 
 sub options {
   my($self, $request, $response) = @_;
-  $response->headers->header('DAV' => 1);
-  $response->headers->header('Allow' =>
-'OPTIONS, GET, HEAD, POST, DELETE, TRACE, PROPFIND, PROPPATCH, COPY, MOVE');
+  no warnings;
+  $response->headers->header('DAV' => [qw(1,2 <http://apache.org/dav/propset/fs/1>)]); # Nautilus freaks out
+  $response->headers->header('MS-Author-Via' => "DAV"); # Nautilus freaks out
+  $response->headers->header('Allow' => join(',', map {uc} keys %implemented));
+  $response->headers->header('Content-Type' => 'httpd/unix-directory');
+  $response->headers->header('Keep-Alive' => 'timeout=15, max=96');
   return $response;
 }
 
-sub proppatch {
+sub head {
   my($self, $request, $response) = @_;
-  $response = HTTP::Response->new(403, "FORBIDDEN", $response->headers);
+  my $path = uri_unescape($request->uri);
+  my $fs = $self->filesys;
+
+  if ($fs->test("f", $path) && $fs->test("r", $path)) {
+    my $fh = $fs->open_read($path);
+    $fs->close_read($fh);
+    $response->last_modified($fs->modtime($path)); 
+  } elsif ($fs->test("d", $path)) {
+    # a web browser, then
+    my @files = $fs->list($path);
+    $response->header('Content-Type', 'text/html');
+  } else {
+    $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
+  }
   return $response;
 }
 
@@ -104,6 +137,14 @@ sub put {
   return $response;
 }
 
+sub _delete_xml {
+  my($dom, $path) = @_;
+
+  my $response = $dom->createElement("d:response");
+  $response->appendTextChild("d:href" => $path);
+  $response->appendTextChild("d:status" => "HTTP/1.1 401 Permission Denied"); # *** FIXME ***
+}
+
 sub delete {
   my($self, $request, $response) = @_;
   my $path = uri_unescape($request->uri);
@@ -113,33 +154,41 @@ sub delete {
     return HTTP::Response->new(404, "NOT FOUND", $response->headers);
   }
 
-  my @files =
-    map { s{/+}{/}g; $_ } 
-    File::Find::Rule::Filesys::Virtual
-   ->virtual($fs)
-   ->file
-   ->in($path);
-
-  my @dirs = reverse sort
+  my $dom = XML::LibXML::Document->new("1.0", "utf-8");
+  my @error;
+  foreach my $part (
     grep { $_ !~ m{/\.\.?$} }
     map { s{/+}{/}g; $_ } 
     File::Find::Rule::Filesys::Virtual
-   ->virtual($fs)
-   ->directory
-   ->in($path);
+    ->virtual($fs)
+    ->in($path), $path) {
 
-  foreach my $file (@files) {
-    $fs->delete($file);
+    warn "[delete: $part]\n";
+
+    next unless $fs->test("e", $part);
+
+    if ($fs->test("f", $part)) {
+      push @error,
+      _delete_xml($dom, $part)
+	unless $fs->delete($part);
+    } elsif ($fs->test("d", $part)) {
+      push @error,
+      _delete_xml($dom, $part)
+	unless $fs->rmdir($part);
+    }
   }
 
-  foreach my $dir (@dirs) {
-    $fs->rmdir($dir);
-  }
+  if (@error) {
+    my $multistatus = $dom->createElement("D:multistatus");
+    $multistatus->setAttribute("xmlns:D", "DAV:");
 
-  if ($fs->test("d", $path)) {
-    $fs->rmdir($path);
-  }
+    $multistatus->addChild($_) foreach @error;
 
+    $response = HTTP::Response->new(207 => "Multi-Status");
+    $response->header("Content-Type" => 'text/xml; charset="utf-8"');
+  } else {
+    $response = HTTP::Response->new(204 => "No Content");
+  }
   return $response;
 }
 
@@ -237,7 +286,8 @@ sub copy_file {
 	  HTTP::Response->new(412, "PRECONDITION FAILED", $response->headers);
       }
     } else {
-      $fh = $fs->open_write($destination);
+      $fh = $fs->open_write($destination) ||
+	return HTTP::Response->new(409, "CONFLICT", $response->headers);
       print $fh $file;
       $fs->close_write($fh);
       $response = HTTP::Response->new(201, "CREATED", $response->headers);
@@ -250,8 +300,37 @@ sub copy_file {
 
 sub move {
   my($self, $request, $response) = @_;
+
+  my $destination = $request->header('Destination');
+  $destination = URI->new($destination)->path;
+  my $destexists = $self->filesys->test("e", $destination);
+
   $response = $self->copy($request, $response);
-  $response = $self->delete($request, $response);
+  $response = $self->delete($request, $response)
+    if $response->is_success;
+
+  $response->code(201) unless $destexists;
+
+  return $response;
+}
+
+sub lock {
+  my($self, $request, $response) = @_;
+  my $path = uri_unescape($request->uri);
+  my $fs   = $self->filesys;
+
+  $fs->lock($path);
+
+  return $response;
+}
+
+sub unlock {
+  my($self, $request, $response) = @_;
+  my $path = uri_unescape($request->uri);
+  my $fs   = $self->filesys;
+
+  $fs->unlock($path);
+
   return $response;
 }
 
@@ -289,10 +368,8 @@ sub propfind {
     if ($@) {
       return HTTP::Response->new(400, "BAD REQUEST", $response->headers);
     }
-    return HTTP::Response->new(403, "FORBIDDEN", $response->headers);
   }
 
-  #    warn "(depth $depth for $path)\n";
   $response = HTTP::Response->new(207, "Multi-Status", $response->headers);
   $response->headers->header('Content-Type' => 'text/xml; charset="utf-8"');
 
@@ -311,6 +388,9 @@ sub propfind {
 
     #  print "@files";
   } else {
+    return HTTP::Response->new(404, "Not Found", $response->headers)
+      if !$fs->test("e", $path);
+
     @files = ($path);
   }
 
@@ -335,20 +415,19 @@ sub propfind {
     }
 
     my $nresponse = $dom->createElement("D:response");
-    $nresponse->setAttribute("xmlns:lp0", "DAV:");
     $nresponse->setAttribute("xmlns:lp1", "http://apache.org/dav/props/");
     $multistatus->addChild($nresponse);
     my $href = $dom->createElement("D:href");
-    $href->appendText(encode_utf8("$file"));
+    $href->appendText(File::Spec->catdir(map {uri_escape encode_utf8 $_} File::Spec->splitdir($file)));
     $nresponse->addChild($href);
     my $propstat = $dom->createElement("D:propstat");
     $nresponse->addChild($propstat);
     my $prop = $dom->createElement("D:prop");
     $propstat->addChild($prop);
-    my $creationdate = $dom->createElement("lp0:creationdate");
+    my $creationdate = $dom->createElement("D:creationdate");
     $creationdate->appendText($ctime);
     $prop->addChild($creationdate);
-    my $getlastmodified = $dom->createElement("lp0:getlastmodified");
+    my $getlastmodified = $dom->createElement("D:getlastmodified");
     $getlastmodified->appendText($mtime);
     $prop->addChild($getlastmodified);
     my $getcontentlength = $dom->createElement("D:getcontentlength");
@@ -435,3 +514,7 @@ Copyright (C) 2004, Leon Brocard
 
 This module is free software; you can redistribute it or modify it under
 the same terms as Perl itself.
+
+=cut
+
+1
