@@ -7,15 +7,15 @@ WriteMakefile
           'NAME' => 'Net::DAV::Server',
           'VERSION_FROM' => 'lib/Net/DAV/Server.pm',
           'PREREQ_PM' => {
-                           'DateTime' => 0,
                            'URI' => 0,
                            'URI::Escape' => 0,
-                           'DateTime::Format::HTTP' => 0,
                            'Class::Accessor::Fast' => 0,
                            'HTTP::Date' => 0,
+                           'Encode' => 0,
                            'Test::More' => 0,
-                           'HTTP::Headers' => 0,
                            'HTTP::Response' => 0,
+                           'HTTP::Headers' => 0,
+                           'XML::LibXML' => 0,
                            'HTTP::Request' => 0,
                            'File::Slurp' => 0
                          }

@@ -7,8 +7,7 @@ my $build = Module::Build->new(
   module_name => 'Net::DAV::Server',
   requires    => {
     'Class::Accessor::Fast' => 0,
-    'DateTime' => 0,
-    'DateTime::Format::HTTP' => 0,
+    'Encode' => 0,
     'File::Slurp' => 0,
     'HTTP::Date' => 0,
     'HTTP::Headers' => 0,
@@ -17,6 +16,7 @@ my $build = Module::Build->new(
     'Test::More' => 0,
     'URI' => 0,
     'URI::Escape' => 0,
+    'XML::LibXML' => 0,
 },
 );
 $build->create_build_script;

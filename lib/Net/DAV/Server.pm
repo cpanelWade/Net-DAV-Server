@@ -1,18 +1,18 @@
 package Net::DAV::Server;
 use strict;
 use warnings;
-use DateTime;
-use DateTime::Format::HTTP;
 use File::Slurp;
+use Encode qw(encode_utf8);
 use HTTP::Date;
 use HTTP::Headers;
 use HTTP::Response;
 use HTTP::Request;
 use URI;
 use URI::Escape;
+use XML::LibXML;
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.21';
+our $VERSION = '1.22';
 
 sub new {
   my ($class) = @_;
@@ -28,239 +28,252 @@ sub run {
   my $fs = $self->filesys || die "Boom";
 
   my $method = $request->method;
+  my $path  = uri_unescape($request->uri);
 
-  my $response;
-  if ($method eq 'OPTIONS') {
-    my $headers = HTTP::Headers->new(
-      'Date'          => time2str(time),
-      'Server'        => 'Foomatic',
-      'Content-Type'  => 'text/plain',
-      'DAV'           => 1,
-      'Allow'         =>
-'OPTIONS, GET, HEAD, POST, DELETE, TRACE, PROPFIND, PROPPATCH, COPY, MOVE, LOCK, UNLOCK',
-      'Connection' => 'close',
-    );
-    $response = HTTP::Response->new(200, "OK", $headers);
-  } elsif ($method eq 'GET') {
-    my $path  = uri_unescape($request->uri);
-    my $headers = HTTP::Headers->new(
-      'Date'          => time2str(time),
-      'Server'        => 'Foomatic',
-      'Content-Type'  => 'text/plain',
-      'Connection'    => 'close',
-    );
-    if ($fs->test("f", $path) && $fs->test("r", $path)) {
-      $response = HTTP::Response->new(200, "OK", $headers);
+  my $headers = HTTP::Headers->new(
+    'Date'         => time2str(time),
+    'Server'       => 'Net::DAV::Server ' . $VERSION,
+    'Content-Type' => 'text/plain',
+    'Connection'   => 'close',
+  );
+  my $response = HTTP::Response->new(200, "OK", $headers);
 
-      my $fh = $fs->open_read($path);
-      my $file = join '', <$fh>;
-      $fs->close_read($fh);
-      $response->content($file);
-    } elsif ($fs->test("d", $path)) {
-      # a web browser, then
-      $response = HTTP::Response->new(200, "OK", $headers);
-      my @files = $fs->list($path);
-      my $body;
-      foreach my $file (@files) {
-	if ($fs->test("d", "$path$file")) {
-	  $body .= qq|<a href="$file/">$file/</a><br>\n|;
-	} else {
-	  $file =~ s{/$}{};
-	  $body .= qq|<a href="$file">$file</a><br>\n|;
-	}
-      }
-      $response->header('Content-Type', 'text/html');
-      $response->content($body);
-    } else {
-      $response = HTTP::Response->new(404, "NOT FOUND", $headers);
-    }
-  } elsif ($method eq 'PUT') {
-    my $path    = $request->uri;
-    my $headers = HTTP::Headers->new(
-      'Date'          => time2str(time),
-      'Server'        => 'Foomatic',
-      'Content-Type'  => 'text/plain',
-      'Connection'    => 'close',
-    );
-
-    #  if ($fs->test("f", $path) && $fs->test("r", $path)) {
-    $response = HTTP::Response->new(201, "CREATED", $headers);
-
-    my $fh = $fs->open_write($path);
-    print $fh $request->content;
-    $fs->close_write($fh);
-
-    #  } else {
-    #    $response = HTTP::Response->new(404, "NOT FOUND", $headers );
-    #  }
-  } elsif ($method eq 'DELETE') {
-    my $path    = $request->uri;
-    my $headers = HTTP::Headers->new(
-      'Date'          => time2str(time),
-      'Server'        => 'Foomatic',
-      'Content-Type'  => 'text/plain',
-      'Connection'    => 'close',
-    );
-    if ($fs->test("f", $path)) {
-      $fs->delete($path);
-      $response = HTTP::Response->new(200, "OK", $headers);
-    } elsif ($fs->test("d", $path)) {
-      warn "do not deeply delete collections yet";
-      foreach my $f ($fs->list($path)) {
-        next if $f =~ /^\.+$/;
-        $fs->delete("$path$f") || warn "uhoh";
-      }
-      $fs->rmdir($path);
-      $response = HTTP::Response->new(200, "OK", $headers);
-    } else {
-      $response = HTTP::Response->new(404, "NOT FOUND", $headers);
-    }
-  } elsif ($method eq 'COPY') {
-    my $path        = $request->uri;
-    my $destination = $request->header('Destination');
-    $destination = URI->new($destination)->path;
-    my $depth     = $request->header('Depth');
-    my $overwrite = $request->header('Overwrite');
-
-    my $headers = HTTP::Headers->new(
-      'Date'          => time2str(time),
-      'Server'        => 'Foomatic',
-      'Content-Type'  => 'text/plain',
-      'Connection'    => 'close',
-    );
-    if ($fs->test("f", $path)) {
-      if ($fs->test("d", $destination)) {
-        $response = HTTP::Response->new(204, "NO CONTENT", $headers);
-      } elsif ($fs->test("f", $path) && $fs->test("r", $path)) {
-        my $fh = $fs->open_read($path);
-        my $file = join '', <$fh>;
-        $fs->close_read($fh);
-        if ($fs->test("f", $destination)) {
-          if ($overwrite eq 'T') {
-            $fh = $fs->open_write($destination);
-            print $fh $request->content;
-            $fs->close_write($fh);
-            $response = HTTP::Response->new(200, "OK", $headers);
-          } else {
-            $response =
-              HTTP::Response->new(412, "PRECONDITION FAILED", $headers);
-          }
-        } else {
-          $fh = $fs->open_write($destination);
-          print $fh $request->content;
-          $fs->close_write($fh);
-          $response = HTTP::Response->new(201, "CREATED", $headers);
-        }
-      } else {
-        $response = HTTP::Response->new(404, "NOT FOUND", $headers);
-      }
-    } else {
-      warn "do not copy dirs yet";
-    }
-  } elsif ($method eq 'MKCOL') {
-    my $path    = $request->uri;
-    my $headers = HTTP::Headers->new(
-      'Date'          => time2str(time),
-      'Server'        => 'Foomatic',
-      'Content-Type'  => 'text/plain',
-      'Connection'    => 'close',
-    );
-    if ($request->content) {
-      $response = HTTP::Response->new(415, "UNSUPPORTED MEDIA TYPE", $headers);
-    } elsif (not $fs->test("e", $path)) {
-      $fs->mkdir($path);
-      if ($fs->test("d", $path)) {
-        $response = HTTP::Response->new(200, "OK", $headers);
-      } else {
-        $response = HTTP::Response->new(409, "CONFLICT", $headers);
-      }
-    } else {
-      $response = HTTP::Response->new(405, "NOT ALLOWED", $headers);
-    }
-  } elsif ($method eq 'PROPFIND') {
-    my $path  = uri_unescape($request->uri);
-    my $depth = $request->header('Depth');
-#    warn "(depth $depth for $path)\n";
-    my $headers = HTTP::Headers->new(
-      'Date'          => time2str(time),
-      'Server'        => 'Foomatic',
-      'Content-Type'  => 'text/xml; charset="utf-8"',
-      'Connection'    => 'close',
-    );
-    $response = HTTP::Response->new(207, "Multi-Status", $headers);
-    my $content = q|<?xml version="1.0" encoding="utf-8"?>
-<D:multistatus xmlns:D="DAV:">|;
-
-    my @files;
-    if ($depth == 1 and $fs->test("d", $path)) {
-      my $p = $path;
-      $p .= '/' unless $p =~ m{/$};
-      @files = map { $p . $_ } $fs->list($path);
-      push @files, $path;
-
-      #  print "@files";
-    } else {
-      @files = ($path);
-    }
-
-    foreach my $file (@files) {
-
-      my ($resourcetype, $contenttype, $status);
-
-      my (
-        $dev,  $ino,   $mode,  $nlink, $uid,     $gid, $rdev,
-        $size, $atime, $mtime, $ctime, $blksize, $blocks
-        )
-        = $fs->stat($file);
-      my $mtime_dt = DateTime->from_epoch(epoch => $mtime || 0);
-      $mtime = DateTime::Format::HTTP->format_datetime($mtime_dt);
-
-      $size ||= "";
-
-      if ($fs->test("d", $file)) {
-        $resourcetype = '<D:collection/>';
-        $contenttype  = 'httpd/unix-directory';
-        $status       = "HTTP/1.1 200 OK";
-      } elsif ($fs->test("f", $file)) {
-        $resourcetype = '';
-        $contenttype  = 'httpd/unix-file';
-        $status       = "HTTP/1.1 200 OK";
-      } else {
-        $resourcetype = '';
-        $contenttype  = '';
-        $status       = "HTTP/1.1 404 NOT FOUND";
-      }
-
-      $file =~ s/&/&amp;/g;
-
-      $content .= qq|
-<D:response xmlns:lp0="DAV:" xmlns:lp1="http://apache.org/dav/props/">
-<D:href>$file</D:href>
-<D:propstat>
-<D:prop>
-<lp0:creationdate xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.tz">$mtime_dt</lp0:creationdate>
-<lp0:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">$mtime</lp0:getlastmodified>
-<D:getcontentlength>$size</D:getcontentlength>
-<D:supportedlock/>
-<D:lockdiscovery/>
-<D:resourcetype>$resourcetype</D:resourcetype>
-<D:getcontenttype>$contenttype</D:getcontenttype>
-</D:prop>
-<D:status>$status</D:status>
-</D:propstat>
-</D:response>|;
-
-    }
-
-    $content .= "</D:multistatus>";
-    $response->content($content);
-  } else {
-    die "unknown request method $method ";
-  }
-
+  $method = lc $method;
+  $response = $self->$method($request, $response);
   $response->header('Content-Length' => length($response->content));
   return $response;
 }
+
+sub options {
+  my($self, $request, $response) = @_;
+  $response->headers->header('DAV' => 1);
+  $response->headers->header('Allow' =>
+'OPTIONS, GET, HEAD, POST, DELETE, TRACE, PROPFIND, PROPPATCH, COPY, MOVE, LOCK, UNLOCK');
+  return $response;
+}
+
+sub get {
+  my($self, $request, $response) = @_;
+  my $path = uri_unescape($request->uri);
+  my $fs = $self->filesys;
+
+  if ($fs->test("f", $path) && $fs->test("r", $path)) {
+    my $fh = $fs->open_read($path);
+    my $file = join '', <$fh>;
+    $fs->close_read($fh);
+    $response->content($file);
+    $response->last_modified($fs->modtime($path)); 
+  } elsif ($fs->test("d", $path)) {
+    # a web browser, then
+    my @files = $fs->list($path);
+    my $body;
+    foreach my $file (@files) {
+      if ($fs->test("d", "$path$file")) {
+	$body .= qq|<a href="$file/">$file/</a><br>\n|;
+      } else {
+	$file =~ s{/$}{};
+	$body .= qq|<a href="$file">$file</a><br>\n|;
+      }
+    }
+    $response->header('Content-Type', 'text/html');
+    $response->content($body);
+  } else {
+    $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
+  }
+  return $response;
+}
+
+sub put {
+  my($self, $request, $response) = @_;
+  my $path = uri_unescape($request->uri);
+  my $fs = $self->filesys;
+
+  $response = HTTP::Response->new(201, "CREATED", $response->headers);
+
+  my $fh = $fs->open_write($path);
+  print $fh $request->content;
+  $fs->close_write($fh);
+
+  return $response;
+}
+
+sub delete {
+  my($self, $request, $response) = @_;
+  my $path = uri_unescape($request->uri);
+  my $fs = $self->filesys;
+
+  if ($fs->test("f", $path)) {
+    $fs->delete($path);
+  } elsif ($fs->test("d", $path)) {
+    warn "do not deeply delete collections yet";
+    foreach my $f ($fs->list($path)) {
+      next if $f =~ /^\.+$/;
+      $fs->delete("$path$f") || warn "uhoh";
+    }
+    $fs->rmdir($path);
+  } else {
+    $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
+  }
+  return $response;
+
+}
+
+sub copy {
+  my($self, $request, $response) = @_;
+  my $path = uri_unescape($request->uri);
+  my $fs = $self->filesys;
+
+  my $destination = $request->header('Destination');
+  $destination = URI->new($destination)->path;
+  my $depth     = $request->header('Depth');
+  my $overwrite = $request->header('Overwrite');
+
+  if ($fs->test("f", $path)) {
+    if ($fs->test("d", $destination)) {
+      $response = HTTP::Response->new(204, "NO CONTENT", $response->headers);
+    } elsif ($fs->test("f", $path) && $fs->test("r", $path)) {
+      my $fh = $fs->open_read($path);
+      my $file = join '', <$fh>;
+      $fs->close_read($fh);
+      if ($fs->test("f", $destination)) {
+	if ($overwrite eq 'T') {
+	  $fh = $fs->open_write($destination);
+	  print $fh $request->content;
+	  $fs->close_write($fh);
+	} else {
+	  $response =
+	    HTTP::Response->new(412, "PRECONDITION FAILED", $response->headers);
+	}
+      } else {
+	$fh = $fs->open_write($destination);
+	print $fh $request->content;
+	$fs->close_write($fh);
+	$response = HTTP::Response->new(201, "CREATED", $response->headers);
+      }
+    } else {
+      $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
+    }
+  } else {
+    warn "do not copy dirs yet";
+  }
+  return $response;
+}
+
+sub mkcol {
+  my($self, $request, $response) = @_;
+  my $path = uri_unescape($request->uri);
+  my $fs = $self->filesys;
+
+  if ($request->content) {
+    $response = HTTP::Response->new(415, "UNSUPPORTED MEDIA TYPE", $response->headers);
+  } elsif (not $fs->test("e", $path)) {
+    $fs->mkdir($path);
+    if ($fs->test("d", $path)) {
+    } else {
+      $response = HTTP::Response->new(409, "CONFLICT", $response->headers);
+    }
+  } else {
+    $response = HTTP::Response->new(405, "NOT ALLOWED", $response->headers);
+  }
+  return $response;
+}
+
+sub propfind {
+  my($self, $request, $response) = @_;
+  my $path = uri_unescape($request->uri);
+  my $fs = $self->filesys;
+  my $depth = $request->header('Depth');
+  #    warn "(depth $depth for $path)\n";
+  $response = HTTP::Response->new(207, "Multi-Status", $response->headers);
+  $response->headers->header('Content-Type' => 'text/xml; charset="utf-8"');
+
+  my $dom = XML::LibXML::Document->new("1.0", "utf-8");
+  my $multistatus = $dom->createElement("D:multistatus");
+  $multistatus->setAttribute("xmlns:D", "DAV:");
+
+  $dom->setDocumentElement($multistatus);
+
+  my @files;
+  if ($depth == 1 and $fs->test("d", $path)) {
+    my $p = $path;
+    $p .= '/' unless $p =~ m{/$};
+    @files = map { $p . $_ } $fs->list($path);
+    push @files, $path;
+
+    #  print "@files";
+  } else {
+    @files = ($path);
+  }
+
+  foreach my $file (@files) {
+    my ($status);
+
+    my (
+        $dev,  $ino,   $mode,  $nlink, $uid,     $gid, $rdev,
+        $size, $atime, $mtime, $ctime, $blksize, $blocks
+       )
+      = $fs->stat($file);
+    $mtime = time2str($mtime) ;
+    $ctime = time2str($ctime);
+    $size ||= "";
+
+    if ($fs->test("f", $file)) {
+      $status       = "HTTP/1.1 200 OK";
+    } elsif ($fs->test("d", $file)) {
+      $status       = "HTTP/1.1 200 OK";
+    } else {
+      $status       = "HTTP/1.1 404 NOT FOUND";
+    }
+
+    my $nresponse = $dom->createElement("D:response");
+    $nresponse->setAttribute("xmlns:lp0", "DAV:");
+    $nresponse->setAttribute("xmlns:lp1", "http://apache.org/dav/props/");
+    $multistatus->addChild($nresponse);
+    my $href = $dom->createElement("D:href");
+    $href->appendText(encode_utf8("$file"));
+    $nresponse->addChild($href);
+    my $propstat = $dom->createElement("D:propstat");
+    $nresponse->addChild($propstat);
+    my $prop = $dom->createElement("D:prop");
+    $propstat->addChild($prop);
+    my $creationdate = $dom->createElement("lp0:creationdate");
+    $creationdate->appendText($ctime);
+    $prop->addChild($creationdate);
+    my $getlastmodified = $dom->createElement("lp0:getlastmodified");
+    $getlastmodified->appendText($mtime);
+    $prop->addChild($getlastmodified);
+    my $getcontentlength = $dom->createElement("D:getcontentlength");
+    $getcontentlength->appendText($size);
+    $prop->addChild($getcontentlength);
+    my $supportedlock = $dom->createElement("D:supportedlock");
+    $prop->addChild($supportedlock);
+    my $lockdiscovery = $dom->createElement("D:lockdiscovery");
+    $prop->addChild($lockdiscovery);
+    my $resourcetype = $dom->createElement("D:resourcetype");
+    if ($fs->test("d", $file)) {
+      my $collection = $dom->createElement("D:collection");
+      $resourcetype->addChild($collection);
+    }
+    $prop->addChild($resourcetype);
+    my $nstatus = $dom->createElement("D:status");
+    $nstatus->appendText($status);
+    $propstat->addChild($nstatus);
+    my $getcontenttype = $dom->createElement("D:getcontenttype");
+
+    if ($fs->test("d", $file)) {
+      $getcontenttype->appendText("httpd/unix-directory");
+    } else {
+      $getcontenttype->appendText("httpd/unix-file");
+    }
+
+    $propstat->addChild($getcontenttype);
+  }
+
+  $response->content($dom->toString(1));
+
+  return $response;
+}
+
 1;
 
 __END__

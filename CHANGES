@@ -1,4 +1,13 @@
 CHANGES file for Net::DAV::Server
 
+1.22 Wed May 19 14:04:47 BST 2004
+  - give a 404 on unknown error (thanks to Yair Lenga)
+  - add Last-Modified upon GETs (thanks to Yair Lenga)
+  - remove DateTime dependency  (thanks to Yair Lenga) 
+  - fix URI encoding problems
+  - give proper Server: header
+  - use XML::LibXML to generate proper XML
+  - refactoring
+
 1.21 Sun May  9 10:16:31 IST 2004
   - first release
