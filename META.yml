@@ -1,0 +1,24 @@
+--- #YAML:1.0
+name: Net-DAV-Server
+version: 1.21
+author:
+  - Leon Brocard <acme@astray.com>
+abstract: Provide a DAV Server
+license: perl
+requires:
+  Class::Accessor::Fast: 0
+  DateTime: 0
+  DateTime::Format::HTTP: 0
+  File::Slurp: 0
+  HTTP::Date: 0
+  HTTP::Headers: 0
+  HTTP::Request: 0
+  HTTP::Response: 0
+  Test::More: 0
+  URI: 0
+  URI::Escape: 0
+provides:
+  Net::DAV::Server:
+    file: lib/Net/DAV/Server.pm
+    version: 1.21
+generated_by: Module::Build version 0.23

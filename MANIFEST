@@ -1,0 +1,7 @@
+Build.PL
+Makefile.PL
+META.yml
+CHANGES
+lib/Net/DAV/Server.pm
+MANIFEST			This list of files
+README
