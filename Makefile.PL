@@ -15,6 +15,7 @@ WriteMakefile
                            'Test::More' => 0,
                            'HTTP::Response' => 0,
                            'HTTP::Headers' => 0,
+                           'File::Find::Rule::Filesys::Virtual' => 0,
                            'XML::LibXML' => 0,
                            'HTTP::Request' => 0,
                            'File::Slurp' => 0

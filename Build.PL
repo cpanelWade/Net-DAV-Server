@@ -9,6 +9,7 @@ my $build = Module::Build->new(
     'Class::Accessor::Fast' => 0,
     'Encode' => 0,
     'File::Slurp' => 0,
+    'File::Find::Rule::Filesys::Virtual' => 0,
     'HTTP::Date' => 0,
     'HTTP::Headers' => 0,
     'HTTP::Response' => 0,

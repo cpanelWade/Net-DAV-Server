@@ -1,5 +1,10 @@
 CHANGES file for Net::DAV::Server
 
+1.23 Thu May 20 10:06:05 BST 2004
+  - implemented recursive copy, delete, move using
+    File::Find::Rule::Filesys::Virtual
+  - 403 on more things we don't support
+
 1.22 Wed May 19 14:04:47 BST 2004
   - give a 404 on unknown error (thanks to Yair Lenga)
   - add Last-Modified upon GETs (thanks to Yair Lenga)

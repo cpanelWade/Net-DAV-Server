@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use File::Slurp;
 use Encode qw(encode_utf8);
+use File::Find::Rule::Filesys::Virtual;
 use HTTP::Date;
 use HTTP::Headers;
 use HTTP::Response;
@@ -12,7 +13,7 @@ use URI::Escape;
 use XML::LibXML;
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.22';
+our $VERSION = '1.23';
 
 sub new {
   my ($class) = @_;
@@ -48,7 +49,13 @@ sub options {
   my($self, $request, $response) = @_;
   $response->headers->header('DAV' => 1);
   $response->headers->header('Allow' =>
-'OPTIONS, GET, HEAD, POST, DELETE, TRACE, PROPFIND, PROPPATCH, COPY, MOVE, LOCK, UNLOCK');
+'OPTIONS, GET, HEAD, POST, DELETE, TRACE, PROPFIND, PROPPATCH, COPY, MOVE');
+  return $response;
+}
+
+sub proppatch {
+  my($self, $request, $response) = @_;
+  $response = HTTP::Response->new(403, "FORBIDDEN", $response->headers);
   return $response;
 }
 
@@ -102,20 +109,38 @@ sub delete {
   my $path = uri_unescape($request->uri);
   my $fs = $self->filesys;
 
-  if ($fs->test("f", $path)) {
-    $fs->delete($path);
-  } elsif ($fs->test("d", $path)) {
-    warn "do not deeply delete collections yet";
-    foreach my $f ($fs->list($path)) {
-      next if $f =~ /^\.+$/;
-      $fs->delete("$path$f") || warn "uhoh";
-    }
-    $fs->rmdir($path);
-  } else {
-    $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
+  unless ($fs->test("e", $path)) {
+    return HTTP::Response->new(404, "NOT FOUND", $response->headers);
   }
-  return $response;
 
+  my @files =
+    map { s{/+}{/}g; $_ } 
+    File::Find::Rule::Filesys::Virtual
+   ->virtual($fs)
+   ->file
+   ->in($path);
+
+  my @dirs = reverse sort
+    grep { $_ !~ m{/\.\.?$} }
+    map { s{/+}{/}g; $_ } 
+    File::Find::Rule::Filesys::Virtual
+   ->virtual($fs)
+   ->directory
+   ->in($path);
+
+  foreach my $file (@files) {
+    $fs->delete($file);
+  }
+
+  foreach my $dir (@dirs) {
+    $fs->rmdir($dir);
+  }
+
+  if ($fs->test("d", $path)) {
+    $fs->rmdir($path);
+  }
+
+  return $response;
 }
 
 sub copy {
@@ -129,33 +154,104 @@ sub copy {
   my $overwrite = $request->header('Overwrite');
 
   if ($fs->test("f", $path)) {
-    if ($fs->test("d", $destination)) {
-      $response = HTTP::Response->new(204, "NO CONTENT", $response->headers);
-    } elsif ($fs->test("f", $path) && $fs->test("r", $path)) {
-      my $fh = $fs->open_read($path);
-      my $file = join '', <$fh>;
-      $fs->close_read($fh);
-      if ($fs->test("f", $destination)) {
-	if ($overwrite eq 'T') {
-	  $fh = $fs->open_write($destination);
-	  print $fh $request->content;
-	  $fs->close_write($fh);
-	} else {
-	  $response =
-	    HTTP::Response->new(412, "PRECONDITION FAILED", $response->headers);
-	}
+    return $self->copy_file($request, $response);
+  }
+
+  # it's a good approximation
+  $depth = 100 if $depth eq 'infinity';
+
+  my @files =
+    map { s{/+}{/}g; $_ } 
+    File::Find::Rule::Filesys::Virtual
+   ->virtual($fs)
+   ->file
+   ->maxdepth($depth)
+   ->in($path);
+
+  my @dirs = reverse sort
+    grep { $_ !~ m{/\.\.?$} }
+    map { s{/+}{/}g; $_ } 
+    File::Find::Rule::Filesys::Virtual
+   ->virtual($fs)
+   ->directory
+   ->maxdepth($depth)
+   ->in($path);
+
+  push @dirs, $path;
+  foreach my $dir (sort @dirs) {
+    my $destdir = $dir;
+    $destdir =~ s/^$path/$destination/;
+    if ($overwrite eq 'F' && $fs->test("e", $destdir)) {
+      return HTTP::Response->new(401, "ERROR", $response->headers);
+    }
+    $fs->mkdir($destdir);
+  }
+
+  foreach my $file (reverse sort @files) {
+    my $destfile = $file;
+    $destfile =~ s/^$path/$destination/;
+    my $fh = $fs->open_read($file);
+    my $file = join '', <$fh>;
+    $fs->close_read($fh);
+    if ($fs->test("e", $destfile)) {
+      if ($overwrite eq 'T') {
+        $fh = $fs->open_write($destfile);
+        print $fh $file;
+        $fs->close_write($fh);
       } else {
-	$fh = $fs->open_write($destination);
-	print $fh $request->content;
-	$fs->close_write($fh);
-	$response = HTTP::Response->new(201, "CREATED", $response->headers);
       }
     } else {
-      $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
+      $fh = $fs->open_write($destfile);
+      print $fh $file;
+      $fs->close_write($fh);
+    }
+  }
+
+  $response = HTTP::Response->new(200, "OK", $response->headers);
+  return $response;
+}
+
+sub copy_file {
+  my($self, $request, $response) = @_;
+  my $path = uri_unescape($request->uri);
+  my $fs = $self->filesys;
+
+  my $destination = $request->header('Destination');
+  $destination = URI->new($destination)->path;
+  my $depth     = $request->header('Depth');
+  my $overwrite = $request->header('Overwrite');
+
+  if ($fs->test("d", $destination)) {
+    $response = HTTP::Response->new(204, "NO CONTENT", $response->headers);
+  } elsif ($fs->test("f", $path) && $fs->test("r", $path)) {
+    my $fh = $fs->open_read($path);
+    my $file = join '', <$fh>;
+    $fs->close_read($fh);
+    if ($fs->test("f", $destination)) {
+      if ($overwrite eq 'T') {
+	$fh = $fs->open_write($destination);
+	print $fh $file;
+	$fs->close_write($fh);
+      } else {
+	$response =
+	  HTTP::Response->new(412, "PRECONDITION FAILED", $response->headers);
+      }
+    } else {
+      $fh = $fs->open_write($destination);
+      print $fh $file;
+      $fs->close_write($fh);
+      $response = HTTP::Response->new(201, "CREATED", $response->headers);
     }
   } else {
-    warn "do not copy dirs yet";
+    $response = HTTP::Response->new(404, "NOT FOUND", $response->headers);
   }
+  return $response;
+}
+
+sub move {
+  my($self, $request, $response) = @_;
+  $response = $self->copy($request, $response);
+  $response = $self->delete($request, $response);
   return $response;
 }
 
@@ -183,6 +279,19 @@ sub propfind {
   my $path = uri_unescape($request->uri);
   my $fs = $self->filesys;
   my $depth = $request->header('Depth');
+
+  if ($request->headers->header('Content-Length')) {
+    my $content = $request->content;
+    my $p = XML::LibXML->new;
+    eval {
+      my $doc = $p->parse_string($content);
+    };
+    if ($@) {
+      return HTTP::Response->new(400, "BAD REQUEST", $response->headers);
+    }
+    return HTTP::Response->new(403, "FORBIDDEN", $response->headers);
+  }
+
   #    warn "(depth $depth for $path)\n";
   $response = HTTP::Response->new(207, "Multi-Status", $response->headers);
   $response->headers->header('Content-Type' => 'text/xml; charset="utf-8"');
@@ -245,10 +354,6 @@ sub propfind {
     my $getcontentlength = $dom->createElement("D:getcontentlength");
     $getcontentlength->appendText($size);
     $prop->addChild($getcontentlength);
-    my $supportedlock = $dom->createElement("D:supportedlock");
-    $prop->addChild($supportedlock);
-    my $lockdiscovery = $dom->createElement("D:lockdiscovery");
-    $prop->addChild($lockdiscovery);
     my $resourcetype = $dom->createElement("D:resourcetype");
     if ($fs->test("d", $file)) {
       my $collection = $dom->createElement("D:collection");
