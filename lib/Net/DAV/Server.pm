@@ -14,7 +14,7 @@ use URI::Escape;
 use XML::LibXML;
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.25';
+our $VERSION = '1.26';
 
 our %implemented = (
   options  => 1,

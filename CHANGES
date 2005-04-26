@@ -1,5 +1,8 @@
 CHANGES file for Net::DAV::Server
 
+1.26 Tue Apr 26 22:03:33 BST 2005
+  - removed webdav.pl (spotted by CDOLAN)
+
 1.25 Sat Mar 26 07:06:03 CST 2005
   - finished the support for parsing PROPFIND request bodies - for
     retreiving property names, named properties, or all properties.

@@ -2,23 +2,23 @@
 use ExtUtils::MakeMaker;
 WriteMakefile
 (
-          'PL_FILES' => {},
-          'INSTALLDIRS' => 'site',
           'NAME' => 'Net::DAV::Server',
           'VERSION_FROM' => 'lib/Net/DAV/Server.pm',
           'PREREQ_PM' => {
-                           'URI' => 0,
-                           'URI::Escape' => 0,
-                           'Class::Accessor::Fast' => 0,
-                           'HTTP::Date' => 0,
-                           'Encode' => 0,
-                           'Test::More' => 0,
-                           'HTTP::Response' => 0,
-                           'HTTP::Headers' => 0,
-                           'File::Find::Rule::Filesys::Virtual' => 0,
-                           'XML::LibXML' => 0,
-                           'HTTP::Request' => 0,
-                           'File::Slurp' => 0
-                         }
+                           'Class::Accessor::Fast' => '0',
+                           'Encode' => '0',
+                           'File::Find::Rule::Filesys::Virtual' => '0',
+                           'File::Slurp' => '0',
+                           'HTTP::Date' => '0',
+                           'HTTP::Headers' => '0',
+                           'HTTP::Request' => '0',
+                           'HTTP::Response' => '0',
+                           'Test::More' => '0',
+                           'URI' => '0',
+                           'URI::Escape' => '0',
+                           'XML::LibXML' => '0'
+                         },
+          'INSTALLDIRS' => 'site',
+          'PL_FILES' => {}
         )
 ;
