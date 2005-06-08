@@ -14,7 +14,7 @@ use URI::Escape;
 use XML::LibXML;
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.26';
+our $VERSION = '1.27';
 
 our %implemented = (
   options  => 1,
@@ -40,24 +40,25 @@ sub new {
 }
 
 sub run {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
 
   my $fs = $self->filesys || die 'Boom';
 
   my $method = $request->method;
-  my $path  = decode_utf8 uri_unescape $request->uri->path;
+  my $path   = decode_utf8 uri_unescape $request->uri->path;
 
   if (!defined $response) {
     $response = HTTP::Response->new;
   }
 
   $method = lc $method;
-  if($implemented{$method}) {
+  if ($implemented{$method}) {
     $response->code(200);
     $response->message('OK');
     $response = $self->$method($request, $response);
     $response->header('Content-Length' => length($response->content));
   } else {
+
     # Saying it isn't implemented is better than crashing!
     warn "$method not implemented\n";
     $response->code(501);
@@ -67,25 +68,27 @@ sub run {
 }
 
 sub options {
-  my($self, $request, $response) = @_;
-  $response->header('DAV' => '1,2,<http://apache.org/dav/propset/fs/1>'); # Nautilus freaks out
-  $response->header('MS-Author-Via' => 'DAV'); # Nautilus freaks out
-  $response->header('Allow' => join(',', map {uc} keys %implemented));
+  my ($self, $request, $response) = @_;
+  $response->header('DAV' => '1,2,<http://apache.org/dav/propset/fs/1>')
+    ;    # Nautilus freaks out
+  $response->header('MS-Author-Via' => 'DAV');    # Nautilus freaks out
+  $response->header('Allow'        => join(',', map { uc } keys %implemented));
   $response->header('Content-Type' => 'httpd/unix-directory');
-  $response->header('Keep-Alive' => 'timeout=15, max=96');
+  $response->header('Keep-Alive'   => 'timeout=15, max=96');
   return $response;
 }
 
 sub head {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
   my $path = decode_utf8 uri_unescape $request->uri->path;
-  my $fs = $self->filesys;
+  my $fs   = $self->filesys;
 
   if ($fs->test("f", $path) && $fs->test("r", $path)) {
     my $fh = $fs->open_read($path);
     $fs->close_read($fh);
     $response->last_modified($fs->modtime($path));
   } elsif ($fs->test("d", $path)) {
+
     # a web browser, then
     my @files = $fs->list($path);
     $response->header('Content-Type' => 'text/html; charset="utf-8"');
@@ -96,9 +99,9 @@ sub head {
 }
 
 sub get {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
   my $path = decode_utf8 uri_unescape $request->uri->path;
-  my $fs = $self->filesys;
+  my $fs   = $self->filesys;
 
   if ($fs->test('f', $path) && $fs->test('r', $path)) {
     my $fh = $fs->open_read($path);
@@ -107,6 +110,7 @@ sub get {
     $response->content($file);
     $response->last_modified($fs->modtime($path));
   } elsif ($fs->test('d', $path)) {
+
     # a web browser, then
     my @files = $fs->list($path);
     my $body;
@@ -128,9 +132,9 @@ sub get {
 }
 
 sub put {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
   my $path = decode_utf8 uri_unescape $request->uri->path;
-  my $fs = $self->filesys;
+  my $fs   = $self->filesys;
 
   $response = HTTP::Response->new(201, "CREATED", $response->headers);
 
@@ -142,17 +146,18 @@ sub put {
 }
 
 sub _delete_xml {
-  my($dom, $path) = @_;
+  my ($dom, $path) = @_;
 
   my $response = $dom->createElement("d:response");
-  $response->appendTextChild("d:href" => $path);
-  $response->appendTextChild("d:status" => "HTTP/1.1 401 Permission Denied"); # *** FIXME ***
+  $response->appendTextChild("d:href"   => $path);
+  $response->appendTextChild("d:status" => "HTTP/1.1 401 Permission Denied")
+    ;    # *** FIXME ***
 }
 
 sub delete {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
   my $path = decode_utf8 uri_unescape $request->uri->path;
-  my $fs = $self->filesys;
+  my $fs   = $self->filesys;
 
   if ($request->uri->fragment) {
     return HTTP::Response->new(404, "NOT FOUND", $response->headers);
@@ -167,20 +172,19 @@ sub delete {
   foreach my $part (
     grep { $_ !~ m{/\.\.?$} }
     map { s{/+}{/}g; $_ }
-    File::Find::Rule::Filesys::Virtual
-    ->virtual($fs)
-    ->in($path), $path) {
+    File::Find::Rule::Filesys::Virtual->virtual($fs)->in($path),
+    $path
+    )
+  {
 
     next unless $fs->test("e", $part);
 
     if ($fs->test("f", $part)) {
-      push @error,
-      _delete_xml($dom, $part)
-      unless $fs->delete($part);
+      push @error, _delete_xml($dom, $part)
+        unless $fs->delete($part);
     } elsif ($fs->test("d", $part)) {
-      push @error,
-      _delete_xml($dom, $part)
-      unless $fs->rmdir($part);
+      push @error, _delete_xml($dom, $part)
+        unless $fs->rmdir($part);
     }
   }
 
@@ -199,9 +203,9 @@ sub delete {
 }
 
 sub copy {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
   my $path = decode_utf8 uri_unescape $request->uri->path;
-  my $fs = $self->filesys;
+  my $fs   = $self->filesys;
 
   my $destination = $request->header('Destination');
   $destination = URI->new($destination)->path;
@@ -217,20 +221,14 @@ sub copy {
 
   my @files =
     map { s{/+}{/}g; $_ }
-    File::Find::Rule::Filesys::Virtual
-   ->virtual($fs)
-   ->file
-   ->maxdepth($depth)
-   ->in($path);
+    File::Find::Rule::Filesys::Virtual->virtual($fs)->file->maxdepth($depth)
+    ->in($path);
 
   my @dirs = reverse sort
     grep { $_ !~ m{/\.\.?$} }
     map { s{/+}{/}g; $_ }
-    File::Find::Rule::Filesys::Virtual
-   ->virtual($fs)
-   ->directory
-   ->maxdepth($depth)
-   ->in($path);
+    File::Find::Rule::Filesys::Virtual->virtual($fs)
+    ->directory->maxdepth($depth)->in($path);
 
   push @dirs, $path;
   foreach my $dir (sort @dirs) {
@@ -267,9 +265,9 @@ sub copy {
 }
 
 sub copy_file {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
   my $path = decode_utf8 uri_unescape $request->uri->path;
-  my $fs = $self->filesys;
+  my $fs   = $self->filesys;
 
   my $destination = $request->header('Destination');
   $destination = URI->new($destination)->path;
@@ -310,13 +308,13 @@ sub copy_file {
 }
 
 sub move {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
 
   my $destination = $request->header('Destination');
   $destination = URI->new($destination)->path;
   my $destexists = $self->filesys->test("e", $destination);
 
-  $response = $self->copy($request, $response);
+  $response = $self->copy($request,   $response);
   $response = $self->delete($request, $response)
     if $response->is_success;
 
@@ -326,7 +324,7 @@ sub move {
 }
 
 sub lock {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
   my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs   = $self->filesys;
 
@@ -336,7 +334,7 @@ sub lock {
 }
 
 sub unlock {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
   my $path = decode_utf8 uri_unescape $request->uri->path;
   my $fs   = $self->filesys;
 
@@ -346,9 +344,9 @@ sub unlock {
 }
 
 sub mkcol {
-  my($self, $request, $response) = @_;
+  my ($self, $request, $response) = @_;
   my $path = decode_utf8 uri_unescape $request->uri->path;
-  my $fs = $self->filesys;
+  my $fs   = $self->filesys;
 
   if ($request->content) {
     $response->code(415);
@@ -368,31 +366,31 @@ sub mkcol {
 }
 
 sub propfind {
-  my($self, $request, $response) = @_;
-  my $path = decode_utf8 uri_unescape $request->uri->path;
-  my $fs = $self->filesys;
+  my ($self, $request, $response) = @_;
+  my $path  = decode_utf8 uri_unescape $request->uri->path;
+  my $fs    = $self->filesys;
   my $depth = $request->header('Depth');
 
   my $reqinfo = 'allprop';
   my @reqprops;
   if ($request->header('Content-Length')) {
     my $content = $request->content;
-    my $parser = XML::LibXML->new;
+    my $parser  = XML::LibXML->new;
     my $doc;
-    eval {
-      $doc = $parser->parse_string($content);
-    };
+    eval { $doc = $parser->parse_string($content); };
     if ($@) {
       $response->code(400);
       $response->message('Bad Request');
       return $response;
     }
+
     #$reqinfo = doc->find('/DAV:propfind/*')->localname;
     $reqinfo = $doc->find('/*/*')->shift->localname;
     if ($reqinfo eq 'prop') {
+
       #for my $node ($doc->find('/DAV:propfind/DAV:prop/*')) {
       for my $node ($doc->find('/*/*/*')->get_nodelist) {
-        push @reqprops, [$node->namespaceURI, $node->localname];
+        push @reqprops, [ $node->namespaceURI, $node->localname ];
       }
     }
   }
@@ -416,7 +414,7 @@ sub propfind {
   if (defined $depth && $depth eq 1 and $fs->test('d', $path)) {
     my $p = $path;
     $p .= '/' unless $p =~ m{/$};
-    @paths = map {$p . $_} $fs->list($path);
+    @paths = map { $p . $_ } $fs->list($path);
     push @paths, $path;
   } else {
     @paths = ($path);
@@ -424,9 +422,10 @@ sub propfind {
 
   for my $path (@paths) {
     my (
-        $dev,  $ino,   $mode,  $nlink, $uid,     $gid, $rdev,
-        $size, $atime, $mtime, $ctime, $blksize, $blocks
-    ) = $fs->stat($path);
+      $dev,  $ino,   $mode,  $nlink, $uid,     $gid, $rdev,
+      $size, $atime, $mtime, $ctime, $blksize, $blocks
+      )
+      = $fs->stat($path);
     $mtime = time2str($mtime);
     $ctime = time2str($ctime);
     $size ||= '';
@@ -434,14 +433,19 @@ sub propfind {
     my $resp = $doc->createElement('D:response');
     $multistat->addChild($resp);
     my $href = $doc->createElement('D:href');
-    $href->appendText(File::Spec->catdir(map {uri_escape encode_utf8 $_} File::Spec->splitdir($path)));
+    $href->appendText(
+      File::Spec->catdir(
+        map { uri_escape encode_utf8 $_} File::Spec->splitdir($path)
+      )
+    );
     $resp->addChild($href);
     my $okprops = $doc->createElement('D:prop');
     my $nfprops = $doc->createElement('D:prop');
     my $prop;
+
     if ($reqinfo eq 'prop') {
       my %prefixes = (D => 'DAV:');
-      my $i = 0;
+      my $i        = 0;
 
       for my $reqprop (@reqprops) {
         my ($ns, $name) = @$reqprop;
@@ -516,6 +520,25 @@ sub propfind {
       $prop = $doc->createElement('D:getlastmodified');
       $prop->appendText($mtime);
       $okprops->addChild($prop);
+      do {
+        $prop = $doc->createElement('D:supportedlock');
+        for my $n (qw(exclusive shared)) {
+          my $lock = $doc->createElement('D:lockentry');
+
+          my $scope = $doc->createElement('D:lockscope');
+          my $attr  = $doc->createElement('D:' . $n);
+          $scope->addChild($attr);
+          $lock->addChild($scope);
+
+          my $type = $doc->createElement('D:locktype');
+          $attr = $doc->createElement('D:write');
+          $type->addChild($attr);
+          $lock->addChild($type);
+
+          $prop->addChild($lock);
+        }
+        $okprops->addChild($prop);
+      };
       $prop = $doc->createElement('D:resourcetype');
       if ($fs->test('d', $path)) {
         my $col = $doc->createElement('D:collection');

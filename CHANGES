@@ -1,5 +1,9 @@
 CHANGES file for Net::DAV::Server
 
+1.27 Wed Jun  8 10:33:44 BST 2005
+  - advertise that locking is available to get Windows DAV happier
+    (thanks to Stefan `Sec` Zehl)
+
 1.26 Tue Apr 26 22:03:33 BST 2005
   - removed webdav.pl (spotted by CDOLAN)
 
