@@ -4,7 +4,7 @@ use warnings;
 use File::Slurp;
 use Encode;
 use File::Find::Rule::Filesys::Virtual;
-use HTTP::Date;
+use HTTP::Date qw(time2str time2isoz);
 use HTTP::Headers;
 use HTTP::Response;
 use HTTP::Request;
@@ -14,7 +14,7 @@ use URI::Escape;
 use XML::LibXML;
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.27';
+our $VERSION = '1.28';
 
 our %implemented = (
   options  => 1,
@@ -426,8 +426,17 @@ sub propfind {
       $size, $atime, $mtime, $ctime, $blksize, $blocks
       )
       = $fs->stat($path);
+
+    # modified time is stringified human readable HTTP::Date style
     $mtime = time2str($mtime);
-    $ctime = time2str($ctime);
+
+    # created time is ISO format
+    # tidy up date format - isoz isn't exactly what we want, but
+    # it's easy to change.
+    $ctime = time2isoz($ctime);
+    $ctime =~ s/ /T/;
+    $ctime =~ s/Z//;
+
     $size ||= '';
 
     my $resp = $doc->createElement('D:response');
@@ -444,7 +453,7 @@ sub propfind {
     my $prop;
 
     if ($reqinfo eq 'prop') {
-      my %prefixes = (D => 'DAV:');
+      my %prefixes = ('DAV:' => 'D');
       my $i        = 0;
 
       for my $reqprop (@reqprops) {
@@ -621,7 +630,19 @@ OS X Finder as clients.
 
 Leon Brocard <acme@astray.com>
 
+=head1 MAINTAINERS
+
+  Bron Gondwana <perlcode@brong.net> ( current maintainer )
+  Leon Brocard <acme@astray.com>     ( original author )
+
+The latest copy of this package can be checked out using Subversion
+from http://svn.brong.net/netdavserver/release
+
+Development code at http://svn.brong.net/netdavserver/trunk
+
+
 =head1 COPYRIGHT
+
 
 Copyright (C) 2004, Leon Brocard
 

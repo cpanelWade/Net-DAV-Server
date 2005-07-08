@@ -1,5 +1,10 @@
 CHANGES file for Net::DAV::Server
 
+1.28 Sat Jul  9 00:08:24 EST 2005
+  - new maintainer: Bron Gondwana <perlcode@brong.net>
+  - fix DAV: namespace in propfind
+  - use ISO time format for DAV::creationdate property
+
 1.27 Wed Jun  8 10:33:44 BST 2005
   - advertise that locking is available to get Windows DAV happier
     (thanks to Stefan `Sec` Zehl)
