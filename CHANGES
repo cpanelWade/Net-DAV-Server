@@ -1,7 +1,18 @@
 CHANGES file for Net::DAV::Server
 
+1.29 Wed Jul 19 11:42:56 EST 2006
+  - Bugfix: RT#17077 - uninitialised variable.  
+    -- Thanks to CLOTHO
+  - Bugfixes/interoperability:
+    * RT#20022 - add trailing slashes to directory names in listing.
+    * RT#20016 - remove upwards path from directory listing.
+    -- Both thanks to HACHI
+  - Test infrastructure (requires litmus installed) to ensure
+    new changes don't cause regressions.
+  - Add 'TODO' list to remind myself of other work I want to do. 
+
 1.28 Sat Jul  9 00:08:24 EST 2005
-  - new maintainer: Bron Gondwana <perlcode@brong.net>
+  - new maintainer: Bron Gondwana <brong@brong.net>
   - fix DAV: namespace in propfind
   - use ISO time format for DAV::creationdate property
 

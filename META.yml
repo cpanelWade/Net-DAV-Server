@@ -1,6 +1,6 @@
 ---
 name: Net-DAV-Server
-version: 1.28
+version: 1.29
 author:
   - Leon Brocard <acme@astray.com>
 abstract: Provide a DAV Server
@@ -21,5 +21,5 @@ requires:
 provides:
   Net::DAV::Server:
     file: lib/Net/DAV/Server.pm
-    version: 1.28
+    version: 1.29
 generated_by: Module::Build version 0.26

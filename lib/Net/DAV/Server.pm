@@ -14,7 +14,7 @@ use URI::Escape;
 use XML::LibXML;
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.28';
+our $VERSION = '1.29';
 
 our %implemented = (
   options  => 1,
@@ -209,8 +209,8 @@ sub copy {
 
   my $destination = $request->header('Destination');
   $destination = URI->new($destination)->path;
-  my $depth     = $request->header('Depth');
-  my $overwrite = $request->header('Overwrite');
+  my $depth     = $request->header('Depth') || 0;
+  my $overwrite = $request->header('Overwrite') || 'F';
 
   if ($fs->test("f", $path)) {
     return $self->copy_file($request, $response);
@@ -414,7 +414,7 @@ sub propfind {
   if (defined $depth && $depth eq 1 and $fs->test('d', $path)) {
     my $p = $path;
     $p .= '/' unless $p =~ m{/$};
-    @paths = map { $p . $_ } $fs->list($path);
+    @paths = map { $p . $_ } File::Spec->no_upwards( $fs->list($path) );
     push @paths, $path;
   } else {
     @paths = ($path);
@@ -448,6 +448,7 @@ sub propfind {
       )
     );
     $resp->addChild($href);
+    $href->appendText( '/' ) if $fs->test('d', $path);
     my $okprops = $doc->createElement('D:prop');
     my $nfprops = $doc->createElement('D:prop');
     my $prop;
