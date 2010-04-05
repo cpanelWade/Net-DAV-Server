@@ -2,7 +2,7 @@ package Net::DAV::LockManager::UUID;
 
 use strict;
 
-use Digest::SHA qw(sha1_hex);
+use Digest::SHA1 qw(sha1_hex);
 
 sub generate {
 	my ($path, $author) = @_;
