@@ -17,7 +17,11 @@ sub new {
 }
 
 sub can_modify {
-    my ($self, $resource, $user, $token) = @_;
+    my ($self, $req) = @_;
+
+    _validate_lock_request( $req );
+
+    my ($resource, $user, $token) = @{$req}{qw/path owner token/};
 
     die "Not a clean path\n" if $resource =~ m{(?:^|/)\.\.?(?:$|/)};
     my $lock = $self->_get_lock( $resource );
@@ -65,8 +69,8 @@ sub _clear_lock {
 
 sub lock {
     my ($self, $req) = @_;
-    die 
 
+    _validate_lock_request( $req );
     my $path = $req->{'path'};
     my $timeout = $req->{'timeout'} || $DEFAULT_LOCK_TIMEOUT;
     $timeout = $MAX_LOCK_TIMEOUT if $timeout > $MAX_LOCK_TIMEOUT;
@@ -87,8 +91,8 @@ sub lock {
 
 sub refresh_lock {
     my ($self, $req) = @_;
+    _validate_lock_request( $req, 'token' );
 
-    die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
     my $lock = $self->_get_lock( $req->{'path'} );
 
     return unless $lock && $lock->{'owner'} eq $req->{'owner'} && $lock->{'token'} eq $req->{'token'};
@@ -99,14 +103,14 @@ sub refresh_lock {
 }
 
 sub unlock {
-    my ($self, $resource, $user, $token) = @_;
+    my ($self, $req) = @_;
+    _validate_lock_request( $req, 'token' );
 
-    die "Not a clean path\n" if $resource =~ m{(?:^|/)\.\.?(?:$|/)};
-    my $lock = $self->_get_lock( $resource );
+    my $lock = $self->_get_lock( $req->{'path'} );
 
-    return unless $lock && $lock->{'owner'} eq $user && $lock->{'token'} eq $token;
+    return unless $lock && $lock->{'owner'} eq $req->{'owner'} && $lock->{'token'} eq $req->{'token'};
 
-    $self->_clear_lock( $resource );
+    $self->_clear_lock( $req->{'path'} );
     return 1;
 }
 
@@ -117,7 +121,12 @@ sub _generate_token {
 }
 
 sub _validate_lock_request {
-    my ($req) = @_;
+    my ($req, @required) = @_;
     die "Parameter should be a hash reference.\n" unless 'HASH' eq ref $req;
-
+    foreach my $arg ( qw/path owner/, @required ) {
+        die "Missing required '$arg' parameter.\n" unless exists $req->{$arg};
+    }
+    die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
+    die "Not a valid owner name.\n" unless $req->{'path'} =~ m{^[a-z_.][-a-z_.]*$}i;  # May need better validation.
+    # Validate optional parameters as necessary.
 }
