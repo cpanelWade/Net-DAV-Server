@@ -23,7 +23,9 @@ my $d = HTTP::Daemon->new(
 
 # Run litmus against it
 if (my $pid = fork()) {
-  system("litmus", $d->url());
+  if( -1 == system("litmus", $d->url()) ) {
+      print "Unable to start the 'litmus' program.\n";
+  }
   kill 9, $pid;
   exit 0;
 } 
