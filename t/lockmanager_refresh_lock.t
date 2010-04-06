@@ -7,10 +7,10 @@ use strict;
 use warnings;
 
 use Net::DAV::LockManager ();
-use Net::DAV::LockManager::UUID ();
+use Net::DAV::UUID ();
 
 # Exploits an implementation detail
-my $mock_token = 'opaquelocktoken:' . Net::DAV::LockManager::UUID::generate( '/tmp/file', 'fred' );
+my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fred' );
 
 {
     my $mgr = Net::DAV::LockManager->new();
