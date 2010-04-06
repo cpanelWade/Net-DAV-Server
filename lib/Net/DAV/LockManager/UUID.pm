@@ -5,19 +5,19 @@ use strict;
 use Digest::SHA1 qw(sha1_hex);
 
 sub generate {
-	my ($path, $author) = @_;
+	my ($path, $owner) = @_;
 
 	#
 	# Obtain a SHA1 sum concatenated from the following elements:
 	#
 	# * Filesystem path of item to receive a lock token
-	# * Lock owner/author
+	# * Lock owner/owner
 	# * Current timestamp
 	# * Random number seed
 	# * Current UID
 	# * Process ID
 	#
-	my $sum = sha1_hex($path . $author . time() . rand() . $< . $$);
+	my $sum = sha1_hex($path . $owner . time() . rand() . $< . $$);
 
 	#
 	# Split the SHA1 sum into a series of five tokens of varying
