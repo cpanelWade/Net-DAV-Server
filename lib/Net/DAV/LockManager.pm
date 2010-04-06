@@ -31,7 +31,7 @@ sub can_modify {
 
     # Check indirect locking, though ancestors.
     my $ancestor = $resource;
-    while( $ancestor =~ s{/[^/]+$}{} ) {
+    while( $ancestor =~ s{/[^/]+$}{} && length $ancestor ) {
         $lock = $self->_get_lock( $ancestor );
         if ( $lock ) {
             next unless $lock->{'depth'} eq 'infinity';
@@ -50,7 +50,7 @@ sub lock {
     my $timeout = $req->{'timeout'} || $DEFAULT_LOCK_TIMEOUT;
     $timeout = $MAX_LOCK_TIMEOUT if $timeout > $MAX_LOCK_TIMEOUT;
     my $expire = time + $timeout;
-    return unless $self->can_modify( $path ) && !$self->_get_lock( $path );
+    return unless $self->can_modify( $req ) && !$self->_get_lock( $path );
 
     my $token = $self->_generate_token( $req );
 
@@ -61,6 +61,7 @@ sub lock {
         depth => $req->{'depth'}||'infinity',
         scope => $req->{'scope'}||'exclusive',
     });
+    # TODO - needs to return timeout as well.
     return $token;
 }
 
@@ -137,7 +138,8 @@ sub _validate_lock_request {
         die "Missing required '$arg' parameter.\n" unless exists $req->{$arg};
     }
     die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
-    die "Not a valid owner name.\n" unless $req->{'path'} =~ m{^[a-z_.][-a-z_.]*$}i;  # May need better validation.
+    die "Not a clean path\n" if $req->{'path'} !~ m{^/} || $req->{'path'} =~ m{/$};
+    die "Not a valid owner name.\n" unless $req->{'owner'} =~ m{^[a-z_.][-a-z_.]*$}i;  # May need better validation.
     # Validate optional parameters as necessary.
     return;
 }

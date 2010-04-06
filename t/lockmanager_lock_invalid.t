@@ -1,17 +1,12 @@
 #!/usr/bin/perl
 
-use Test::More tests => 9;
+use Test::More tests => 12;
 use Carp;
 
 use strict;
 use warnings;
 
-use FindBin;
-use lib "$FindBin::Bin/..";
-use lib "/usr/local/cpanel";
-
 use Net::DAV::LockManager ();
-
 
 {
     # Validate parameters
@@ -26,8 +21,8 @@ use Net::DAV::LockManager ();
 {
     # Path checking
     my $mgr = Net::DAV::LockManager->new();
-    foreach my $path ( qw{.. fred/.. ../fred fred/../bianca} ) {
-        ok( !defined eval { $mgr->lock({ 'path' => $path, 'owner'=>'gwj' }) }, "$path: Not an allowed path" );
+    foreach my $path ( qw{/.. /fred/.. /../fred /fred/../bianca /fred/ fred/ fred} ) {
+        did_die( sub { $mgr->lock({ 'path' => $path, 'owner'=>'gwj' }) }, qr/Not a clean path/, "$path: Not an allowed path" );
     }
 }
 

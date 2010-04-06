@@ -6,10 +6,6 @@ use Carp;
 use strict;
 use warnings;
 
-use FindBin;
-use lib "$FindBin::Bin/..";
-use lib "/usr/local/cpanel";
-
 use Net::DAV::LockManager ();
 
 my $mgr = Net::DAV::LockManager->new();
