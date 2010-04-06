@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 12;
+use Test::More tests => 18;
 use Carp;
 
 use strict;
@@ -21,8 +21,16 @@ use Net::DAV::LockManager ();
 {
     # Path checking
     my $mgr = Net::DAV::LockManager->new();
-    foreach my $path ( qw{/.. /fred/.. /../fred /fred/../bianca /fred/ fred/ fred} ) {
+    foreach my $path ( '', qw{/.. /fred/.. /../fred /fred/../bianca /fred/ fred/ fred} ) {
         did_die( sub { $mgr->lock({ 'path' => $path, 'owner'=>'gwj' }) }, qr/Not a clean path/, "$path: Not an allowed path" );
+    }
+}
+
+{
+    # Owner checking
+    my $mgr = Net::DAV::LockManager->new();
+    foreach my $owner ( '', qw{aa()bb /fred/ ab+cd 1fred} ) {
+        did_die( sub { $mgr->lock({ 'path' => '/fred/foo', 'owner'=>$owner }) }, qr/Not a valid owner/, "$owner Not an allowed owner" );
     }
 }
 

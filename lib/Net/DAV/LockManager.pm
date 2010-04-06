@@ -26,6 +26,7 @@ sub can_modify {
     my $lock = $self->_get_lock( $resource );
 
     if ( $lock ) {
+        return unless $token;
         return $lock->{'owner'} eq $user && $lock->{'token'} eq $token;
     }
 
@@ -34,6 +35,7 @@ sub can_modify {
     while( $ancestor =~ s{/[^/]+$}{} && length $ancestor ) {
         $lock = $self->_get_lock( $ancestor );
         if ( $lock ) {
+            return unless $token;
             next unless $lock->{'depth'} eq 'infinity';
             return $lock->{'owner'} eq $user && $lock->{'token'} eq $token;
         }
@@ -122,7 +124,7 @@ sub _clear_lock {
 sub _generate_token {
     my ($self, $req) = @_;
 
-    return 'opaquelocktoken:' . Net::DAV::LockManager::UUID::generate();
+    return 'opaquelocktoken:' . Net::DAV::LockManager::UUID::generate( $req->{'path'}, $req->{'owner'} );
 }
 
 #
@@ -138,8 +140,8 @@ sub _validate_lock_request {
         die "Missing required '$arg' parameter.\n" unless exists $req->{$arg};
     }
     die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
-    die "Not a clean path\n" if $req->{'path'} !~ m{^/} || $req->{'path'} =~ m{/$};
-    die "Not a valid owner name.\n" unless $req->{'owner'} =~ m{^[a-z_.][-a-z_.]*$}i;  # May need better validation.
+    die "Not a clean path\n" if $req->{'path'} !~ m{^/} || $req->{'path'} =~ m{./$};
+    die "Not a valid owner name.\n" unless $req->{'owner'} =~ m{^[a-z_.][-a-z0-9_.]*$}i;  # May need better validation.
     # Validate optional parameters as necessary.
     return;
 }
