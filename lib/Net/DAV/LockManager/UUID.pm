@@ -2,8 +2,7 @@ package Net::DAV::LockManager::UUID;
 
 use strict;
 
-use POSIX;
-use Digest::SHA qw(sha1_hex);
+use Digest::SHA1 qw(sha1_hex);
 
 sub generate {
 	my ($path, $author) = @_;
@@ -18,7 +17,7 @@ sub generate {
 	# * Current UID
 	# * Process ID
 	#
-	my $sum = sha1_hex($path . $author . time() . rand() . getuid() . getpid());
+	my $sum = sha1_hex($path . $author . time() . rand() . $< . $$);
 
 	#
 	# Split the SHA1 sum into a series of five tokens of varying
