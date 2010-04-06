@@ -4,6 +4,7 @@ use strict;
 
 use DBI;
 use File::Temp qw(tmpnam);
+use Net::DAV::Lock;
 
 our @schema = (
 	qq{
@@ -146,37 +147,30 @@ sub DESTROY {
 sub get {
 	my ($self, $path) = @_;
 
-	return $self->{"db"}->selectrow_hashref("select * from lock where path = ?", {}, $path);
+	return Net::DAV::Lock->new(
+		$self->{"db"}->selectrow_hashref("select * from lock where path = ?", {}, $path)
+	);
 }
 
 #
-# Given a hash reference containing a lock, update any locks
-# corresponding to the path therein with the expiry and UUID
-# as listed in the record.
+# Given an instance of Net::DAV::Lock, update any entries in the
+# database whose path corresponds to the value provided in the
+# object.
 #
 sub update {
 	my ($self, $lock) = @_;
 
-	my $statement = $self->{"db"}->prepare("update lock set expiry = ? where path = ?");
-
-	$statement->execute(
-		$lock->{"expiry"},
-		$lock->{"path"}
+	$self->{"db"}->do("update lock set expiry = ? where path = ?", {},
+		$lock->expiry,
+		$lock->path
 	);
 
 	return $lock;
 }
 
 #
-# When provided a hash reference containing the following pieces
-# of information (per hash element) will be inserted into the database:
-#
-# * UUID
-# * expiry
-# * owner
-# * depth
-# * scope
-# * path
+# Insert the data passed in an instance of Net::DAV::Lock into the
+# database, and return that reference.
 #
 sub add {
 	my ($self, $lock) = @_;
@@ -190,28 +184,25 @@ sub add {
 	};
 
 	$self->{"db"}->do($sql, {},
-		$lock->{"uuid"},
-		$lock->{"expiry"},
-		$lock->{"owner"},
-		$lock->{"depth"},
-		$lock->{"scope"},
-		$lock->{"path"}
+		$lock->uuid,
+		$lock->expiry,
+		$lock->owner,
+		$lock->depth,
+		$lock->scope,
+		$lock->path
 	);
 
 	return $lock;
 }
 
 #
-# Given a lock, the database record which contains the corresponding
-# path will be removed.  The UUID in the lock passed will be overwritten
-# with an undef value to force invalidation of the lock.
+# Given a Net::DAV::Lock object, the database record which contains the
+# corresponding path.
 #
 sub remove {
 	my ($self, $lock) = @_;
 
-	$self->{"db"}->do("delete from lock where path = ?", {}, $lock->{"path"});
-
-	$lock->{"uuid"} = undef;
+	$self->{"db"}->do("delete from lock where path = ?", {}, $lock->path);
 }
 
 1;

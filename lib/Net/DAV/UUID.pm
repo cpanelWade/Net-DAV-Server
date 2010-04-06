@@ -1,4 +1,4 @@
-package Net::DAV::LockManager::UUID;
+package Net::DAV::UUID;
 
 use strict;
 

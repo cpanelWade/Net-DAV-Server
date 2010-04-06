@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use File::Spec ();
-use Net::DAV::LockManager::UUID;
+use Net::DAV::UUID;
 
 my $MAX_LOCK_TIMEOUT = 15 * 60;
 my $DEFAULT_LOCK_TIMEOUT = $MAX_LOCK_TIMEOUT;
@@ -128,7 +128,7 @@ sub _clear_lock {
 sub _generate_token {
     my ($self, $req) = @_;
 
-    return 'opaquelocktoken:' . Net::DAV::LockManager::UUID::generate( $req->{'path'}, $req->{'owner'} );
+    return 'opaquelocktoken:' . Net::DAV::UUID::generate( $req->{'path'}, $req->{'owner'} );
 }
 
 #
