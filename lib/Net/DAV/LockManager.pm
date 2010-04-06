@@ -22,8 +22,6 @@ sub can_modify {
     _validate_lock_request( $req );
 
     my ($resource, $user, $token) = @{$req}{qw/path owner token/};
-
-    die "Not a clean path\n" if $resource =~ m{(?:^|/)\.\.?(?:$|/)};
     my $lock = $self->_get_lock( $resource );
 
     if ( $lock ) {
@@ -40,30 +38,6 @@ sub can_modify {
         }
     }
 
-    return 1;
-}
-
-sub _get_lock {
-    my ($self, $path) = @_;
-    my $lock = $self->{'_locks'}->{$path};
-    return $lock unless $lock;
-
-    if ( time >= $lock->{'expire'} ) {
-        $self->_clear_lock( $path );
-        return undef;
-    }
-    return $self->{'_locks'}->{$path};
-}
-
-sub _set_lock {
-    my ($self, $path, $lock) = @_;
-    $self->{'_locks'}->{$path} = $lock;
-    return 1;
-}
-
-sub _clear_lock {
-    my ($self, $path) = @_;
-    delete $self->{'_locks'}->{$path};
     return 1;
 }
 
@@ -114,12 +88,47 @@ sub unlock {
     return 1;
 }
 
+sub _get_lock {
+    my ($self, $path) = @_;
+    my $lock = $self->{'_locks'}->{$path};
+    return $lock unless $lock;
+
+    if ( time >= $lock->{'expire'} ) {
+        $self->_clear_lock( $path );
+        return undef;
+    }
+    return $self->{'_locks'}->{$path};
+}
+
+sub _set_lock {
+    my ($self, $path, $lock) = @_;
+    $self->{'_locks'}->{$path} = $lock;
+    return 1;
+}
+
+#
+# 
+sub _clear_lock {
+    my ($self, $path) = @_;
+    delete $self->{'_locks'}->{$path};
+    return 1;
+}
+
+#
+# Generate a string appropriate for use as a LOCK token in a WebDAV
+# system, gevien the parameters in $req.
 sub _generate_token {
     my ($self, $req) = @_;
 
     return 'opaquelocktoken:abcdef01-dead-beef-0bad-0123456789ab';
 }
 
+#
+# Perform general parameter validation.
+# The parameter passed in should be a hash reference to be validated.
+# The optional list that follows are names of required parameters besides the
+#   'path' and 'owner' parameters that are always required.
+# Throws exception on failure.
 sub _validate_lock_request {
     my ($req, @required) = @_;
     die "Parameter should be a hash reference.\n" unless 'HASH' eq ref $req;
@@ -129,4 +138,5 @@ sub _validate_lock_request {
     die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
     die "Not a valid owner name.\n" unless $req->{'path'} =~ m{^[a-z_.][-a-z_.]*$}i;  # May need better validation.
     # Validate optional parameters as necessary.
+    return;
 }
