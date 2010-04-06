@@ -4,4 +4,5 @@
 ^blib
 ^Makefile$
 .*\.bak$
+.*\.old$
 pm_to_blib
