@@ -1,4 +1,4 @@
-package Net::DAV::LockManager::Hash;
+package Net::DAV::LockManager::Simple;
 
 use strict;
 
