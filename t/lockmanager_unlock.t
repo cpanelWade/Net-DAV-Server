@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 use Carp;
 
 use strict;
@@ -41,6 +41,14 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 
     ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $lck->{'token'} }),
         'Can not unlock sibling lock' );
+}
+
+{
+    my $mgr = Net::DAV::LockManager->new();
+    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
+
+    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $mock_token }),
+        'Can not unlock with wrong token' );
 }
 
 {
