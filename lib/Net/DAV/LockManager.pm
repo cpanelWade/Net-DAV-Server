@@ -56,15 +56,13 @@ sub lock {
 
     my $token = $self->_generate_token( $req );
 
-    $self->_set_lock( $path, {
+    return $self->_set_lock( $path, {
         expiry => $expiry,
         owner => $req->{'owner'},
         token => $token,
         depth => (exists $req->{'depth'} ? $req->{'depth'} : 'infinity'),
         scope => $req->{'scope'}||'exclusive',
     });
-    # TODO - needs to return timeout as well.
-    return $token;
 }
 
 sub refresh_lock {
@@ -77,7 +75,7 @@ sub refresh_lock {
 
     $lock->{'expiry'} = time() + $req->{'timeout'}||$DEFAULT_LOCK_TIMEOUT;
 
-    return $lock->{'token'};
+    return $self->_set_lock( $req->{'path'}, $lock );
 }
 
 sub unlock {
@@ -92,6 +90,9 @@ sub unlock {
     return 1;
 }
 
+#
+# Retrieve a lock from the lock database, given the path to the lock.
+# Return undef if none.
 sub _get_lock {
     my ($self, $path) = @_;
     my $lock = $self->{'_locks'}->{$path};
@@ -104,14 +105,17 @@ sub _get_lock {
     return $self->{'_locks'}->{$path};
 }
 
+#
+# Add a lock to the lock database, given a path and the lock information
+# TODO split into set and update
 sub _set_lock {
     my ($self, $path, $lock) = @_;
     $self->{'_locks'}->{$path} = $lock;
-    return 1;
+    return { %$lock };
 }
 
 #
-# 
+# Remove a lock from the lock database
 sub _clear_lock {
     my ($self, $path) = @_;
     delete $self->{'_locks'}->{$path};
