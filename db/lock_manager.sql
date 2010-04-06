@@ -5,7 +5,7 @@ create table lock (
 	expiry INT,
 	owner TEXT,
 	depth TEXT,
-	scope TEXT
+	scope TEXT,
 	path TEXT
 );
 
