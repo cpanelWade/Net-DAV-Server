@@ -28,16 +28,29 @@ sub get {
 	return $lock;
 }
 
+sub update {
+	my ($self, $lock) = @_;
+
+	my $statement = $self->{"db"}->prepare("update lock set expiry = ? where uuid = ?");
+
+	$statement->execute(
+		$lock->{"expiry"},
+		$lock->{"uuid"}
+	);
+
+	return $lock;
+}
+
 sub add {
 	my ($self, $lock) = @_;
 
-	my $sql = <<-'END';
+	my $sql = qq{
 		insert into lock (
 			uuid, expiry, owner, depth, scope, path
 		) values (
 			?, ?, ?, ?, ?, ?
 		)
-	END
+	};
 
 	$self->{"db"}->prepare($sql)->execute(
 		Net::DAV::LockManager::UUID::generate(),
@@ -54,9 +67,9 @@ sub add {
 sub remove {
 	my ($self, $lock) = @_;
 
-	my $sql = <<-'END';
+	my $sql = qq{
 		delete from lock where uuid = ?
-	END
+	};
 
 	$self->{"db"}->prepare($sql)->execute(
 		$lock->{"uuid"}
