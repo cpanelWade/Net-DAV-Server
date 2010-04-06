@@ -4,12 +4,11 @@ use strict;
 
 use DBI;
 use File::Temp qw(tmpnam);
-use Net::DAV::LockManager::UUID;
 
 our @schema = (
 	qq{
 		create table lock (                                                                                                     
-			uuid TEXT PRIMARY KEY,                                                                                              
+			token TEXT PRIMARY KEY,                                                                                              
 			expiry INT,                                                                                                         
 			owner TEXT,                                                                                                         
 			depth TEXT,                                                                                                         
@@ -145,17 +144,17 @@ sub get {
 
 #
 # Given a hash reference containing a lock, update any locks
-# corresponding to the path therein with the expiry and UUID
+# corresponding to the path therein with the expiry and token 
 # as listed in the record.
 #
 sub update {
 	my ($self, $lock) = @_;
 
-	my $statement = $self->{"db"}->prepare("update lock set expiry = ? where uuid = ?");
+	my $statement = $self->{"db"}->prepare("update lock set expiry = ? where token = ?");
 
 	$statement->execute(
 		$lock->{"expiry"},
-		$lock->{"uuid"}
+		$lock->{"token"}
 	);
 
 	return $lock;
@@ -163,37 +162,28 @@ sub update {
 
 #
 # When provided a hash reference containing the following pieces
-# of information (per hash element)...
+# of information (per hash element) will be inserted into the database:
 #
+# * token
 # * expiry
 # * owner
 # * depth
 # * scope
 # * path
 #
-# ...a UUID will be generated, the lock will be inserted into the
-# database, and the reference to the hash inserted will be returned.
-#
 sub add {
 	my ($self, $lock) = @_;
 
 	my $sql = qq{
 		insert into lock (
-			uuid, expiry, owner, depth, scope, path
+			token, expiry, owner, depth, scope, path
 		) values (
 			?, ?, ?, ?, ?, ?
 		)
 	};
 
 	$self->{"db"}->do($sql, {},
-		#
-		# Be sure to pass path and owner as salt to the UUID::generate()
-		# method.
-		#
-		Net::DAV::LockManager::UUID::generate(
-			$lock->{"path"},
-			$lock->{"owner"},
-		),
+		$lock->{"token"},
 		$lock->{"expiry"},
 		$lock->{"owner"},
 		$lock->{"depth"},
@@ -206,15 +196,15 @@ sub add {
 
 #
 # Given a lock, the database record which contains the corresponding
-# UUID will be removed.  The UUID in the lock passed will be overwritten
+# token will be removed.  The token in the lock passed will be overwritten
 # with an undef value to force invalidation of the lock.
 #
 sub remove {
 	my ($self, $lock) = @_;
 
-	$self->{"db"}->do("delete from lock where uuid = ?", {}, $lock->{"uuid"});
+	$self->{"db"}->do("delete from lock where token = ?", {}, $lock->{"token"});
 
-	$lock->{"uuid"} = undef;
+	$lock->{"token"} = undef;
 }
 
 1;
