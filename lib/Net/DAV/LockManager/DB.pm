@@ -155,11 +155,11 @@ sub get {
 sub update {
 	my ($self, $lock) = @_;
 
-	my $statement = $self->{"db"}->prepare("update lock set expiry = ? where uuid = ?");
+	my $statement = $self->{"db"}->prepare("update lock set expiry = ? where path = ?");
 
 	$statement->execute(
 		$lock->{"expiry"},
-		$lock->{"uuid"}
+		$lock->{"path"}
 	);
 
 	return $lock;
@@ -201,13 +201,13 @@ sub add {
 
 #
 # Given a lock, the database record which contains the corresponding
-# UUID will be removed.  The UUID in the lock passed will be overwritten
+# path will be removed.  The UUID in the lock passed will be overwritten
 # with an undef value to force invalidation of the lock.
 #
 sub remove {
 	my ($self, $lock) = @_;
 
-	$self->{"db"}->do("delete from lock where uuid = ?", {}, $lock->{"uuid"});
+	$self->{"db"}->do("delete from lock where path = ?", {}, $lock->{"path"});
 
 	$lock->{"uuid"} = undef;
 }
