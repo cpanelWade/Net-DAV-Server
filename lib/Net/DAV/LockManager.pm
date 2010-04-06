@@ -32,11 +32,12 @@ sub can_modify {
 
     # Check indirect locking, though ancestors.
     my $ancestor = $resource;
-    while( $ancestor =~ s{/[^/]+$}{} && length $ancestor ) {
+    while( $ancestor =~ s{/[^/]+$}{} ) {
+        $ancestor = '/' unless length $ancestor;
         $lock = $self->_get_lock( $ancestor );
         if ( $lock ) {
+            next unless !exists $lock->{'depth'} || $lock->{'depth'} eq 'infinity';
             return unless $token;
-            next unless $lock->{'depth'} eq 'infinity';
             return $lock->{'owner'} eq $user && $lock->{'token'} eq $token;
         }
     }
@@ -46,7 +47,6 @@ sub can_modify {
 
 sub lock {
     my ($self, $req) = @_;
-
     _validate_lock_request( $req );
     my $path = $req->{'path'};
     my $timeout = $req->{'timeout'} || $DEFAULT_LOCK_TIMEOUT;
@@ -60,7 +60,7 @@ sub lock {
         expiry => $expiry,
         owner => $req->{'owner'},
         token => $token,
-        depth => $req->{'depth'}||'infinity',
+        depth => (exists $req->{'depth'} ? $req->{'depth'} : 'infinity'),
         scope => $req->{'scope'}||'exclusive',
     });
     # TODO - needs to return timeout as well.

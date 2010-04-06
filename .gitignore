@@ -5,3 +5,6 @@ blib
 *.gz
 *.old
 *.bak
+Build
+_build
+cover_db
