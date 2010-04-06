@@ -87,6 +87,8 @@ sub _initialize {
 		foreach my $definition (@schema) {
 			$self->{"db"}->do($definition);
 		}
+
+		$self->{"db"}->commit();
 	};
 
 	#
