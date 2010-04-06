@@ -7,28 +7,33 @@ use File::Temp qw(tmpnam);
 
 our @schema = (
 	qq{
-		create table lock (                                                                                                     
-			token TEXT PRIMARY KEY,                                                                                              
-			expiry INT,                                                                                                         
-			owner TEXT,                                                                                                         
-			depth TEXT,                                                                                                         
-			scope TEXT,                                                                                                         
-			path TEXT                                                                                                           
+		create table lock (
+			uuid CHAR(36) PRIMARY KEY,
+			expiry INTEGER,
+			owner CHAR(128),
+			depth CHAR(32),
+			scope CHAR(32),
+			path CHAR(512) 
 		)
 	}
 );
 
 #
 # Create a new lock manager database context.  Optionally accepts a
-# parameter representing the path to an SQLite3 database file.  A
-# default, temporary file name is used.  In such an event, 
+# parameter representing a DBI-formatted Data Source Name (DSN).  If no
+# DSN is provided, then a temporary SQLite database is used by default.
 #
 sub new {
 	my $class = shift;
-	my $file = $_[0]? $_[0]: File::Temp::tmpnam("/tmp", ".webdav-locks");
+	my $dsn = $_[0]? $_[0]: undef;
+	my $tmp = undef;
+
+	unless ($dsn) {
+		$dsn = sprintf("dbi:SQLite:dbname=%s", $tmp = File::Temp::tmpnam("/tmp", ".webdav-locks"));
+	}
 
 	my $self = bless {
-		"db" => DBI->connect("dbi:SQLite:dbname=" . $file, "", "")
+		"db" => DBI->connect($dsn, "", "")
 	}, $class;
 
 	#
@@ -36,8 +41,8 @@ sub new {
 	# new object instance so that a proper cleanup can happen at destruction
 	# time.
 	#
-	unless ($_[0]) {
-		$self->{"tmp"} = $file;
+	if ($tmp) {
+		$self->{"tmp"} = $tmp;
 	}
 
 	#
@@ -144,17 +149,17 @@ sub get {
 
 #
 # Given a hash reference containing a lock, update any locks
-# corresponding to the path therein with the expiry and token 
+# corresponding to the path therein with the expiry and UUID
 # as listed in the record.
 #
 sub update {
 	my ($self, $lock) = @_;
 
-	my $statement = $self->{"db"}->prepare("update lock set expiry = ? where token = ?");
+	my $statement = $self->{"db"}->prepare("update lock set expiry = ? where uuid = ?");
 
 	$statement->execute(
 		$lock->{"expiry"},
-		$lock->{"token"}
+		$lock->{"uuid"}
 	);
 
 	return $lock;
@@ -164,7 +169,7 @@ sub update {
 # When provided a hash reference containing the following pieces
 # of information (per hash element) will be inserted into the database:
 #
-# * token
+# * UUID
 # * expiry
 # * owner
 # * depth
@@ -176,14 +181,14 @@ sub add {
 
 	my $sql = qq{
 		insert into lock (
-			token, expiry, owner, depth, scope, path
+			uuid, expiry, owner, depth, scope, path
 		) values (
 			?, ?, ?, ?, ?, ?
 		)
 	};
 
 	$self->{"db"}->do($sql, {},
-		$lock->{"token"},
+		$lock->{"uuid"},
 		$lock->{"expiry"},
 		$lock->{"owner"},
 		$lock->{"depth"},
@@ -196,15 +201,15 @@ sub add {
 
 #
 # Given a lock, the database record which contains the corresponding
-# token will be removed.  The token in the lock passed will be overwritten
+# UUID will be removed.  The UUID in the lock passed will be overwritten
 # with an undef value to force invalidation of the lock.
 #
 sub remove {
 	my ($self, $lock) = @_;
 
-	$self->{"db"}->do("delete from lock where token = ?", {}, $lock->{"token"});
+	$self->{"db"}->do("delete from lock where uuid = ?", {}, $lock->{"uuid"});
 
-	$lock->{"token"} = undef;
+	$lock->{"uuid"} = undef;
 }
 
 1;
