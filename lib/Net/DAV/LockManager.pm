@@ -124,7 +124,7 @@ sub _clear_lock {
 
 #
 # Generate a string appropriate for use as a LOCK token in a WebDAV
-# system, gevien the parameters in $req.
+# system, given the parameters in $req.
 sub _generate_token {
     my ($self, $req) = @_;
 
@@ -147,5 +147,6 @@ sub _validate_lock_request {
     die "Not a clean path\n" if $req->{'path'} !~ m{^/} || $req->{'path'} =~ m{./$};
     die "Not a valid owner name.\n" unless $req->{'owner'} =~ m{^[a-z_.][-a-z0-9_.]*$}i;  # May need better validation.
     # Validate optional parameters as necessary.
+    # TODO Add validation for timeout, depth, and scope.
     return;
 }
