@@ -29,7 +29,9 @@ sub generate {
 	my $offset = 0;
 
 	foreach my $size (8, 4, 4, 4, 12) {
-		push @tokens, substr($sum, $offset += $size, $size);
+		push @tokens, substr($sum, $offset, $size);
+
+		$offset += $size;
 	}
 
 	return join "-", @tokens;
