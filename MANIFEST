@@ -15,6 +15,8 @@ README
 t/base_new.t
 t/base_options.t
 t/lock_simple.t
+t/lockmanager_can_modify.t
+t/lockmanager_lock.t
 t/lockmanager_lock_invalid.t
 t/lockmanager_new.t
 t/pod.t
