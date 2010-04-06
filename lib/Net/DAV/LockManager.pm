@@ -51,13 +51,13 @@ sub lock {
     my $path = $req->{'path'};
     my $timeout = $req->{'timeout'} || $DEFAULT_LOCK_TIMEOUT;
     $timeout = $MAX_LOCK_TIMEOUT if $timeout > $MAX_LOCK_TIMEOUT;
-    my $expire = time + $timeout;
+    my $expiry = time + $timeout;
     return unless $self->can_modify( $req ) && !$self->_get_lock( $path );
 
     my $token = $self->_generate_token( $req );
 
     $self->_set_lock( $path, {
-        expire => $expire,
+        expiry => $expiry,
         owner => $req->{'owner'},
         token => $token,
         depth => $req->{'depth'}||'infinity',
@@ -75,7 +75,7 @@ sub refresh_lock {
 
     return unless $lock && $lock->{'owner'} eq $req->{'owner'} && $lock->{'token'} eq $req->{'token'};
 
-    $lock->{'expire'} = time() + $req->{'timeout'}||$DEFAULT_LOCK_TIMEOUT;
+    $lock->{'expiry'} = time() + $req->{'timeout'}||$DEFAULT_LOCK_TIMEOUT;
 
     return $lock->{'token'};
 }
@@ -97,7 +97,7 @@ sub _get_lock {
     my $lock = $self->{'_locks'}->{$path};
     return $lock unless $lock;
 
-    if ( time >= $lock->{'expire'} ) {
+    if ( time >= $lock->{'expiry'} ) {
         $self->_clear_lock( $path );
         return undef;
     }
