@@ -1,0 +1,7 @@
+.gitignore
+^\.git
+^.*\.swp$
+^blib
+^Makefile$
+.*\.bak$
+pm_to_blib
