@@ -13,7 +13,7 @@ use Net::DAV::Lock;
 # the SQLite database driver.
 #
 my @schema = (
-    qq{
+    qq/
         create table lock (
             uuid CHAR(36) PRIMARY KEY,
             expiry INTEGER,
@@ -22,7 +22,7 @@ my @schema = (
             scope CHAR(32),
             path CHAR(512)
         )
-    }
+    /
 );
 
 #
@@ -84,7 +84,7 @@ sub _initialize {
     # If the schema has already been applied to the current database,
     # then we can safely return.
     #
-    if ($self->{'db'}->selectrow_hashref("select name from sqlite_master where name = 'lock'")) {
+    if ($self->{'db'}->selectrow_hashref(q/select name from sqlite_master where name = 'lock'/)) {
         return;
     }
 
@@ -156,7 +156,7 @@ sub DESTROY {
 sub get {
     my ($self, $path) = @_;
 
-    my $row = $self->{'db'}->selectrow_hashref(q{select * from lock where path = ?}, {}, $path);
+    my $row = $self->{'db'}->selectrow_hashref(q/select * from lock where path = ?/, {}, $path);
 
     return $row? Net::DAV::Lock->new($row): undef;
 }
@@ -169,7 +169,7 @@ sub get {
 sub update {
     my ($self, $lock) = @_;
 
-    $self->{'db'}->do("update lock set expiry = ? where path = ?", {},
+    $self->{'db'}->do(q/update lock set expiry = ? where path = ?/, {},
         $lock->expiry,
         $lock->path
     );
@@ -211,7 +211,7 @@ sub add {
 sub remove {
     my ($self, $lock) = @_;
 
-    $self->{'db'}->do("delete from lock where path = ?", {}, $lock->path);
+    $self->{'db'}->do(q/delete from lock where path = ?/, {}, $lock->path);
 }
 
 1;
