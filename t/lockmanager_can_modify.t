@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Net::DAV::LockManager ();
+use Net::DAV::LockManager::Simple ();
 
 use Net::DAV::UUID ();
 
@@ -15,7 +16,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
 
 # No locks
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     ok( $mgr->can_modify({ 'path' => '/', 'owner' => 'fred' }), '/ with no lock' );
     ok( $mgr->can_modify({ 'path' => '/foo', 'owner' => 'fred' }), 'one level with no lock' );
     ok( $mgr->can_modify({ 'path' => '/foo/a/b/c/d/e', 'owner' => 'fred' }), 'multi-level with no lock' );
@@ -23,7 +25,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
 
 # Infinity lock on ancestor
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/', 'owner' => 'fred' });
     my $t = $lck->{'token'};
 
@@ -38,7 +41,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
 
 # Infinity lock on ancestor
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/', 'owner' => 'fred' });
     my $t = $lck->{'token'};
 
@@ -49,7 +53,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
 
 # Infinity lock on non-ancestor
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' });
 
     ok( $mgr->can_modify({ 'path' => '/bar', 'owner' => 'bianca' }), 'different owner, sibling resource, without token' );
@@ -59,7 +64,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
 
 # Non-Infinity lock on ancestor
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/', 'owner' => 'fred', 'depth' => 0 });
     my $t = $lck->{'token'};
 
@@ -74,7 +80,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
 
 # Non-Infinity lock on non-ancestor
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred', 'depth' => 0 });
     my $t = $lck->{'token'};
 

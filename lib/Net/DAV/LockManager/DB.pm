@@ -150,14 +150,15 @@ sub DESTROY {
 
 #
 # Given a normalized string representation of a resource path, return
-# the first lock found.
+# the first lock found.  Return undef if no object was found in the
+# database.
 #
 sub get {
     my ($self, $path) = @_;
 
-    return Net::DAV::Lock->new(
-        $self->{'db'}->selectrow_hashref("select * from lock where path = ?", {}, $path)
-    );
+    my $row = $self->{'db'}->selectrow_hashref(q{select * from lock where path = ?}, {}, $path);
+
+    return $row? Net::DAV::Lock->new($row): undef;
 }
 
 #
