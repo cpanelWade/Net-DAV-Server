@@ -8,6 +8,7 @@ use Net::DAV::UUID;
 
 my $MAX_LOCK_TIMEOUT        = 15 * 60;
 my $DEFAULT_LOCK_TIMEOUT    = $MAX_LOCK_TIMEOUT;
+my $DEFAULT_DEPTH           = 0; # as per RFC 4918
 
 sub new {
     my ($class, $db) = (shift, shift);
@@ -56,6 +57,8 @@ sub lock {
     $timeout = $MAX_LOCK_TIMEOUT if $timeout > $MAX_LOCK_TIMEOUT;
 
     my $expiry = time() + $timeout;
+    my $depth = defined $req->{'depth'}? $req->{'depth'}: $DEFAULT_DEPTH;
+    my $scope = $req->{'scope'} || 'exclusive';
 
     return unless $self->can_modify( $req ) && !$self->_get_lock( $path );
 
@@ -63,8 +66,8 @@ sub lock {
         'path'      => $path,
         'expiry'    => $expiry,
         'owner'     => $req->{'owner'},
-        'depth'     => $req->{'depth'},
-        'scope'     => $req->{'scope'} || 'exclusive'
+        'depth'     => $depth,
+        'scope'     => $scope
     }));
 }
 
@@ -151,8 +154,8 @@ sub _is_permitted {
     my ($req, $lock) = @_;
 
     return 0 unless $lock;
-    return 0 unless $req->{'owner'} eq $lock->owner;
-    return 0 unless $req->{'token'} eq $lock->token;
+    return 0 unless defined $req->{'owner'} && $req->{'owner'} eq $lock->owner;
+    return 0 unless defined $req->{'token'} && $req->{'token'} eq $lock->token;
 
     return 1;
 }
@@ -193,3 +196,5 @@ sub _validate_lock_request {
 
     return;
 }
+
+1;
