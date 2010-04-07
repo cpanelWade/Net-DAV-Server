@@ -151,8 +151,8 @@ sub _is_permitted {
     my ($req, $lock) = @_;
 
     return 0 unless $lock;
-    return 0 unless $req->{'owner'} eq $lock->owner;
-    return 0 unless $req->{'token'} eq $lock->token;
+    return 0 unless exists $req->{'owner'} && $req->{'owner'} eq $lock->owner;
+    return 0 unless exists $req->{'token'} && $req->{'token'} eq $lock->token;
 
     return 1;
 }
