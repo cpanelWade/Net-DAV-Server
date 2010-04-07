@@ -6,7 +6,13 @@ use DBI;
 use File::Temp qw(tmpnam);
 use Net::DAV::Lock;
 
-our @schema = (
+#
+# This provides a listing of all database schema required to initialize
+# a database from an empty state.  Note that this is an array, as each
+# schema definition must be executed separately due to limitations in
+# the SQLite database driver.
+#
+my @schema = (
     qq{
         create table lock (
             uuid CHAR(36) PRIMARY KEY,
@@ -14,7 +20,7 @@ our @schema = (
             owner CHAR(128),
             depth CHAR(32),
             scope CHAR(32),
-            path CHAR(512) 
+            path CHAR(512)
         )
     }
 );
@@ -30,7 +36,8 @@ sub new {
     my $tmp = undef;
 
     unless ($dsn) {
-        $dsn = sprintf('dbi:SQLite:dbname=%s', $tmp = File::Temp::tmpnam('/tmp', '.webdav-locks'));
+        $tmp = File::Temp::tmpnam('/tmp', '.webdav-locks');
+        $dsn = 'dbi:SQLite:dbname='. $tmp;
     }
 
     my $self = bless {
