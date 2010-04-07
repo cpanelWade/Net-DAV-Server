@@ -49,7 +49,7 @@ sub new {
     # specified, if none is present.
     #
     unless ($hash->{'uuid'}) {
-        $obj->{'uuid'} = Net::DAV::UUID::generate($hash->{'path'}, $hash->{'owner'});
+        $obj->{'uuid'} = Net::DAV::UUID::generate(@{$hash}{qw/path owner/});
     }
 
     return bless $obj, $class;
