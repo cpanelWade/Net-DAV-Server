@@ -73,7 +73,7 @@ sub refresh_lock {
 
     return unless $lock && $lock->{'owner'} eq $req->{'owner'} && $lock->{'token'} eq $req->{'token'};
 
-    $lock->{'expiry'} = time() + $req->{'timeout'}||$DEFAULT_LOCK_TIMEOUT;
+    $lock->{'expiry'} = time() + ($req->{'timeout'}||$DEFAULT_LOCK_TIMEOUT);
 
     return $self->_set_lock( $req->{'path'}, $lock );
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More 'no_plan'; #tests => 1;
+use Test::More tests => 21;
 use Carp;
 
 use strict;
@@ -19,6 +19,14 @@ my $token_re = qr/^opaquelocktoken:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/
 {
     my $mgr = Net::DAV::LockManager->new();
     like( $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' })->{'token'}, $token_re, 'lock one level' );
+}
+
+{
+    my $mgr = Net::DAV::LockManager->new();
+    like( $mgr->lock({ 'path' => '/foo', 'owner' => 'fred', 'depth' => 'infinity', 'scope' => 'exclusive', 'timeout' => 900 })->{'token'},
+        $token_re,
+        'lock one level, explicit values.'
+    );
 }
 
 {
