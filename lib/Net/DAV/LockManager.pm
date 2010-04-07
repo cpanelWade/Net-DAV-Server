@@ -76,6 +76,7 @@ sub refresh_lock {
     _validate_lock_request( $req, 'token' );
 
     my $lock = $self->_get_lock( $req->{'path'} );
+    return undef unless $lock;
     return unless _is_permitted( $req, $lock );
 
     $lock->renew( time() + ($req->{'timeout'} || $DEFAULT_LOCK_TIMEOUT) );
