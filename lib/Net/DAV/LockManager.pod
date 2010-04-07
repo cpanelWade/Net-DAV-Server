@@ -177,6 +177,8 @@ based on the idea that this is a mostly internal module that should be being
 called from non-user code. Therefore, it is the client code's responsibility
 to get the parameters right.
 
+=over 4
+
 =item C<< Parameter should be a hash reference. >>
 
 All methods of this class take a hash reference to support named and optional
