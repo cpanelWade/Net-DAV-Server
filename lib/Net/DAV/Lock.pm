@@ -34,7 +34,7 @@ sub new {
         # For non-optional arguments, ensure a value in the hash prodided
         # exists.
         #
-        unless ($hash->{$property} ne undef || $is_optional) {
+        unless (defined $hash->{$property} || $is_optional) {
             die("Missing value for '$property' property");
         }
 
