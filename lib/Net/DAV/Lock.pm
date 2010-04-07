@@ -65,4 +65,18 @@ sub token {
     return 'opaquelocktoken:' . $self->uuid;
 }
 
+#
+# Update the expiration date of this lock.  Throw an error if the update
+# does not progress us forward in time.
+#
+sub renew {
+    my ($self, $expiry) = @_;
+
+    die("New lock expiration date is not greater than the existing value")  unless $expiry > $self->{'expiry'};
+
+    $self->{'expiry'} = $expiry;
+
+    return $self;
+}
+
 1;
