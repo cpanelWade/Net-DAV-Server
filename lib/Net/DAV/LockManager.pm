@@ -89,7 +89,8 @@ sub unlock {
     _validate_lock_request( $req, 'token' );
 
     my $lock = $self->_get_lock( $req->{'path'} );
-    return unless _is_permitted( $req, $lock );
+    return 0 unless $lock;
+    return 0 unless _is_permitted( $req, $lock );
 
     $self->_clear_lock( $lock );
 
@@ -154,7 +155,6 @@ sub _clear_lock {
 sub _is_permitted {
     my ($req, $lock) = @_;
 
-    return 1 unless $lock;
     return 0 unless defined $req->{'owner'} && $req->{'owner'} eq $lock->owner;
     return 0 unless defined $req->{'token'} && $req->{'token'} eq $lock->token;
 
