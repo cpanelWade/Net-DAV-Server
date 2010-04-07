@@ -146,7 +146,16 @@ sub _validate_lock_request {
     die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
     die "Not a clean path\n" if $req->{'path'} !~ m{^/} || $req->{'path'} =~ m{./$};
     die "Not a valid owner name.\n" unless $req->{'owner'} =~ m{^[a-z_.][-a-z0-9_.]*$}i;  # May need better validation.
+
     # Validate optional parameters as necessary.
-    # TODO Add validation for timeout, depth, and scope.
+    if( exists $req->{'scope'} && 'exclusive' ne $req->{'scope'} ) {
+        die "'$req->{'scope'}' is not a supported value for scope.\n";
+    }
+    if( exists $req->{'depth'} && '0' ne $req->{'depth'} && 'infinity' ne $req->{'depth'} ) {
+        die "'$req->{'depth'}' is not a supported value for depth.\n";
+    }
+    if( exists $req->{'timeout'} && $req->{'timeout'} =~ /\D/ ) {
+        die "'$req->{'timeout'}' is not a supported value for timeout.\n";
+    }
     return;
 }
