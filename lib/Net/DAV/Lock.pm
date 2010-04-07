@@ -69,10 +69,15 @@ sub token {
 # Update the expiration date of this lock.  Throw an error if the update
 # does not progress us forward in time.
 #
+# The rationale for providing this method as a means of setting a new
+# value for the lock expiration date is that without it, the immutable
+# nature of this class forces the creation of a new lock object, which
+# would be undesirable as the existing UUID should be preserved.
+#
 sub renew {
     my ($self, $expiry) = @_;
 
-    die("New lock expiration date is not greater than the existing value")  unless $expiry > $self->{'expiry'};
+    die('New lock expiration date is not greater than the existing value') unless $expiry > $self->{'expiry'};
 
     $self->{'expiry'} = $expiry;
 
