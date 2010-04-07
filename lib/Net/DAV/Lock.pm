@@ -31,10 +31,10 @@ sub new {
     #
     while (my ($property, $is_optional) = each(%properties)) {
         #
-        # For non-optional arguments, ensure a value in the hash proviced
+        # For non-optional arguments, ensure a value in the hash prodided
         # exists.
         #
-        unless (exists $hash->{$property} || $is_optional) {
+        unless ($hash->{$property} ne undef || $is_optional) {
             die("Missing value for '$property' property");
         }
 
