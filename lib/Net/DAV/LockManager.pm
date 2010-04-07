@@ -153,7 +153,7 @@ sub _clear_lock {
 sub _is_permitted {
     my ($req, $lock) = @_;
 
-    return 0 unless $lock;
+    return 1 unless $lock;
     return 0 unless defined $req->{'owner'} && $req->{'owner'} eq $lock->owner;
     return 0 unless defined $req->{'token'} && $req->{'token'} eq $lock->token;
 
