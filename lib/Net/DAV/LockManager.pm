@@ -8,7 +8,7 @@ use Net::DAV::UUID;
 
 my $MAX_LOCK_TIMEOUT        = 15 * 60;
 my $DEFAULT_LOCK_TIMEOUT    = $MAX_LOCK_TIMEOUT;
-my $DEFAULT_DEPTH           = 0; # as per RFC 4918
+my $DEFAULT_DEPTH           = 'infinity'; # as per RFC 4918, section 9.10.3, paragraph 5
 
 sub new {
     my ($class, $db) = (shift, shift);
@@ -28,7 +28,7 @@ sub can_modify {
     my $lock = $self->_get_lock( $resource ) || $self->_get_indirect_lock( $resource );
 
     return 1 unless $lock;
-    return unless $token;
+    return 0 unless $token;
 
     return _is_permitted( $req, $lock );
 }
