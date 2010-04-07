@@ -70,6 +70,8 @@ sub add {
     my ($self, $lock) = @_;
 
     push @$self, $lock;
+
+    return $lock;
 }
 
 #
