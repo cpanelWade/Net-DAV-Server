@@ -17,10 +17,10 @@ use strict;
 # containing a default set of locks.
 #
 sub new {
-	my $class = shift;
-	my $self = $_[0]? $_[0]: [];
+    my $class = shift;
+    my $self = $_[0]? $_[0]: [];
 
-	return bless $self, $class;
+    return bless $self, $class;
 }
 
 #
@@ -28,7 +28,7 @@ sub new {
 # used within this package.
 #
 sub close {
-	return;
+    return;
 }
 
 #
@@ -36,15 +36,15 @@ sub close {
 # the first lock found.  Otherwise, return undef if none is located.
 #
 sub get {
-	my ($self, $path) = @_;
+    my ($self, $path) = @_;
 
-	foreach my $lock (@$self) {
-		if ($lock->path eq $path) {
-			return $lock;
-		}
-	}
+    foreach my $lock (@$self) {
+        if ($lock->path eq $path) {
+            return $lock;
+        }
+    }
 
-	return undef;
+    return undef;
 }
 
 #
@@ -52,24 +52,24 @@ sub get {
 # path corresponds to that which is stored in the list.
 #
 sub update {
-	my ($self, $lock) = @_;
+    my ($self, $lock) = @_;
 
-	for (my $i=0; $$self[$i]; $i++) {
-		if ($$self[$i]->path eq $lock->path) {
-			$$self[$i] = $lock;
-		}
-	}
+    for (my $i=0; $$self[$i]; $i++) {
+        if ($$self[$i]->path eq $lock->path) {
+            $$self[$i] = $lock;
+        }
+    }
 
-	return $lock;
+    return $lock;
 }
 
 #
 # Add the given lock object to the list.
 #
 sub add {
-	my ($self, $lock) = @_;
+    my ($self, $lock) = @_;
 
-	push @$self, $lock;
+    push @$self, $lock;
 }
 
 #
@@ -77,13 +77,13 @@ sub add {
 # path will be removed.
 #
 sub remove {
-	my ($self, $lock) = @_;
+    my ($self, $lock) = @_;
 
-	for (my $i=0; $$self[$i]; $i++) {
-		if ($$self[$i]->path eq $lock->path) {
-			splice @$self, $i;
-		}
-	}
+    for (my $i=0; $$self[$i]; $i++) {
+        if ($$self[$i]->path eq $lock->path) {
+            splice @$self, $i;
+        }
+    }
 }
 
 1;

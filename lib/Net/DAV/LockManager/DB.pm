@@ -7,16 +7,16 @@ use File::Temp qw(tmpnam);
 use Net::DAV::Lock;
 
 our @schema = (
-	qq{
-		create table lock (
-			uuid CHAR(36) PRIMARY KEY,
-			expiry INTEGER,
-			owner CHAR(128),
-			depth CHAR(32),
-			scope CHAR(32),
-			path CHAR(512) 
-		)
-	}
+    qq{
+        create table lock (
+            uuid CHAR(36) PRIMARY KEY,
+            expiry INTEGER,
+            owner CHAR(128),
+            depth CHAR(32),
+            scope CHAR(32),
+            path CHAR(512) 
+        )
+    }
 );
 
 #
@@ -25,34 +25,34 @@ our @schema = (
 # DSN is provided, then a temporary SQLite database is used by default.
 #
 sub new {
-	my $class = shift;
-	my $dsn = $_[0]? $_[0]: undef;
-	my $tmp = undef;
+    my $class = shift;
+    my $dsn = $_[0]? $_[0]: undef;
+    my $tmp = undef;
 
-	unless ($dsn) {
-		$dsn = sprintf("dbi:SQLite:dbname=%s", $tmp = File::Temp::tmpnam("/tmp", ".webdav-locks"));
-	}
+    unless ($dsn) {
+        $dsn = sprintf('dbi:SQLite:dbname=%s', $tmp = File::Temp::tmpnam('/tmp', '.webdav-locks'));
+    }
 
-	my $self = bless {
-		"db" => DBI->connect($dsn, "", "")
-	}, $class;
+    my $self = bless {
+        'db' => DBI->connect($dsn, '', '');
+    }, $class;
 
-	#
-	# In the event no file name was passed, take note of this fact in the
-	# new object instance so that a proper cleanup can happen at destruction
-	# time.
-	#
-	if ($tmp) {
-		$self->{"tmp"} = $tmp;
-	}
+    #
+    # In the event no data source name was passed, take note of this fact in
+    # the new object instance so that a proper cleanup can happen at destruction
+    # time.
+    #
+    if ($tmp) {
+        $self->{'tmp'} = $tmp;
+    }
 
-	#
-	# Perform any database initializations that may be required prior to
-	# returning the newly-constructed object.
-	#
-	$self->_initialize();
+    #
+    # Perform any database initializations that may be required prior to
+    # returning the newly-constructed object.
+    #
+    $self->_initialize();
 
-	return $self;
+    return $self;
 }
 
 #
@@ -60,55 +60,56 @@ sub new {
 # file and schema) prior to returning a newly-instantiated object.
 #
 sub _initialize {
-	my ($self) = @_;
+    my ($self) = @_;
 
-	#
-	# Enable transactions for the duration of this method.  Enable
-	# error reporting.
-	#
-	$self->{"db"}->{"AutoCommit"} = 0;
-	$self->{"db"}->{"RaiseError"} = 1;
+    #
+    # Enable transactions for the duration of this method.  Enable
+    # error reporting.
+    #
+    $self->{'db'}->{'AutoCommit'} = 0;
+    $self->{'db'}->{'RaiseError'} = 1;
 
-	#
-	# Only perform initialization if the table definition is missing.
-	# We can use the internal SQLite table SQLITE_MASTER to verify
-	# the presence of our lock table.
-	#
-	# If the schema has already been applied to the current database,
-	# then we can safely return.
-	#
-	if ($self->{"db"}->selectrow_hashref("select name from sqlite_master where name = 'lock'")) {
-		return;
-	}
+    #
+    # Only perform initialization if the table definition is missing.
+    # We can use the internal SQLite table SQLITE_MASTER to verify
+    # the presence of our lock table.
+    #
+    # If the schema has already been applied to the current database,
+    # then we can safely return.
+    #
+    if ($self->{'db'}->selectrow_hashref("select name from sqlite_master where name = 'lock'")) {
+        return;
+    }
 
-	#
-	# The schema has not been applied.  Instantiate it.
-	#
-	eval {
-		foreach my $definition (@schema) {
-			$self->{"db"}->do($definition);
-		}
+    #
+    # The schema has not been applied.  Instantiate it.
+    #
+    eval {
+        foreach my $definition (@schema) {
+            $self->{'db'}->do($definition);
+        }
 
-		$self->{"db"}->commit();
-	};
+        $self->{'db'}->commit();
+    };
 
-	#
-	# Gracefully recover from any errors in instantiating the schema,
-	# in this case by throwing another error describing the situation.
-	#
-	if ($@) {
-		warn("Unable to initialize database schema: $@");
+    #
+    # Gracefully recover from any errors in instantiating the schema,
+    # in this case by throwing another error describing the situation.
+    #
+    if ($@) {
+        warn("Unable to initialize database schema: $@");
 
-		eval {
-			$self->{"db"}->rollback();
-		};
-	}
+        eval {
+            $self->{'db'}->rollback();
+        };
+    }
 
-	#
-	# Disable transactions again.  This is fine, as transactions are
-	# disabled by default when creating a new DBI context.
-	#
-	$self->{"db"}->{"AutoCommit"} = 1;
+    #
+    # Disable transactions and raised errors to revert to default
+    # state.
+    #
+    $self->{'db'}->{'AutoCommit'} = 1;
+    $self->{'db'}->{'RaiseError'} = 0;
 }
 
 #
@@ -118,26 +119,26 @@ sub _initialize {
 # time.
 #
 sub close {
-	my ($self) = @_;
+    my ($self) = @_;
 
-	$self->{"db"}->disconnect();
+    $self->{'db'}->disconnect();
 
-	#
-	# If the name of a temporary database was stored in this object,
-	# be sure to unlink() said file.
-	#
-	if ($self->{"tmp"}) {
-		unlink($self->{"tmp"});
-	}
+    #
+    # If the name of a temporary database was stored in this object,
+    # be sure to unlink() said file.
+    #
+    if ($self->{'tmp'}) {
+        unlink($self->{'tmp'});
+    }
 }
 
 #
 # Garbage collection hook to perform tidy cleanup prior to deallocation.
 #
 sub DESTROY {
-	my ($self) = @_;
+    my ($self) = @_;
 
-	$self->close();
+    $self->close();
 }
 
 #
@@ -145,11 +146,11 @@ sub DESTROY {
 # the first lock found.
 #
 sub get {
-	my ($self, $path) = @_;
+    my ($self, $path) = @_;
 
-	return Net::DAV::Lock->new(
-		$self->{"db"}->selectrow_hashref("select * from lock where path = ?", {}, $path)
-	);
+    return Net::DAV::Lock->new(
+        $self->{'db'}->selectrow_hashref("select * from lock where path = ?", {}, $path)
+    );
 }
 
 #
@@ -158,14 +159,14 @@ sub get {
 # object.
 #
 sub update {
-	my ($self, $lock) = @_;
+    my ($self, $lock) = @_;
 
-	$self->{"db"}->do("update lock set expiry = ? where path = ?", {},
-		$lock->expiry,
-		$lock->path
-	);
+    $self->{'db'}->do("update lock set expiry = ? where path = ?", {},
+        $lock->expiry,
+        $lock->path
+    );
 
-	return $lock;
+    return $lock;
 }
 
 #
@@ -173,26 +174,26 @@ sub update {
 # database, and return that reference.
 #
 sub add {
-	my ($self, $lock) = @_;
+    my ($self, $lock) = @_;
 
-	my $sql = qq{
-		insert into lock (
-			uuid, expiry, owner, depth, scope, path
-		) values (
-			?, ?, ?, ?, ?, ?
-		)
-	};
+    my $sql = qq{
+        insert into lock (
+            uuid, expiry, owner, depth, scope, path
+        ) values (
+            ?, ?, ?, ?, ?, ?
+        )
+    };
 
-	$self->{"db"}->do($sql, {},
-		$lock->uuid,
-		$lock->expiry,
-		$lock->owner,
-		$lock->depth,
-		$lock->scope,
-		$lock->path
-	);
+    $self->{'db'}->do($sql, {},
+        $lock->uuid,
+        $lock->expiry,
+        $lock->owner,
+        $lock->depth,
+        $lock->scope,
+        $lock->path
+    );
 
-	return $lock;
+    return $lock;
 }
 
 #
@@ -200,9 +201,9 @@ sub add {
 # corresponding path.
 #
 sub remove {
-	my ($self, $lock) = @_;
+    my ($self, $lock) = @_;
 
-	$self->{"db"}->do("delete from lock where path = ?", {}, $lock->path);
+    $self->{'db'}->do("delete from lock where path = ?", {}, $lock->path);
 }
 
 1;
