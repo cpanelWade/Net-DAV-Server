@@ -4,6 +4,14 @@ use strict;
 
 use Digest::SHA1 qw(sha1_hex);
 
+#
+# Given a WebDAV resource path and lock requestor/owner, generate
+# a UUID mostly compliant with RFC 4918 section 20.7.  Despite the
+# lack of EUI64 identifier in the host portion of the UUID, the
+# value generated is likely not cryptographically sound and should
+# not be used in production code outside of the limited realm of a
+# WebDAV server implementation.
+#
 sub generate {
     my ($path, $owner) = @_;
 
