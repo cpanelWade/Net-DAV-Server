@@ -36,7 +36,7 @@ sub can_modify {
         $ancestor = '/' unless length $ancestor;
         $lock = $self->_get_lock( $ancestor );
         if ( $lock ) {
-            next unless !exists $lock->{'depth'} || $lock->{'depth'} eq 'infinity';
+            next unless $lock->{'depth'} eq 'infinity';
             return unless $token;
             return $lock->{'owner'} eq $user && $lock->{'token'} eq $token;
         }
