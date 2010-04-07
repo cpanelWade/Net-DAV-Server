@@ -24,7 +24,7 @@ sub can_modify {
 
     _validate_lock_request( $req );
 
-    my ($resource, $token) = @{$req}{qw/path owner token/};
+    my ($resource, $token) = @{$req}{qw/path token/};
     my $lock = $self->_get_lock( $resource ) || $self->_get_indirect_lock( $resource );
 
     return 1 unless $lock;
