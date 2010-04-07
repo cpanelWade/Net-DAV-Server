@@ -34,7 +34,7 @@ sub new {
     }
 
     my $self = bless {
-        'db' => DBI->connect($dsn, '', '');
+        'db' => DBI->connect($dsn, '', '')
     }, $class;
 
     #
