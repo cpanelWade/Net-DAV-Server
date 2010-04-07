@@ -28,7 +28,7 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/', 'owner' => 'fred' });
-    my $t = $lck->{'token'};
+    my $t = $lck->token;
 
     ok( !$mgr->can_modify({ 'path' => '/', 'owner' => 'bianca' }), 'different owner, resource with lock, no token' );
     ok( !$mgr->can_modify({ 'path' => '/foo', 'owner' => 'bianca' }), 'different owner, child of resource with lock, no token' );
@@ -44,7 +44,7 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/', 'owner' => 'fred' });
-    my $t = $lck->{'token'};
+    my $t = $lck->token;
 
     ok( !$mgr->can_modify({ 'path' => '/', 'owner' => 'fred', 'token' => $mock_token }), 'wrong token, resource with lock' );
     ok( !$mgr->can_modify({ 'path' => '/foo', 'owner' => 'fred', 'token' => $mock_token }), 'wrong token, child of resource with lock' );
@@ -67,7 +67,7 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/', 'owner' => 'fred', 'depth' => 0 });
-    my $t = $lck->{'token'};
+    my $t = $lck->token;
 
     ok( !$mgr->can_modify({ 'path' => '/', 'owner' => 'bianca' }), 'different owner, resource with lock, without token' );
     ok( $mgr->can_modify({ 'path' => '/foo', 'owner' => 'bianca' }), 'different owner, child of resource with lock, without token' );
@@ -83,7 +83,7 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/foo', 'fred' )
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred', 'depth' => 0 });
-    my $t = $lck->{'token'};
+    my $t = $lck->token;
 
     ok( $mgr->can_modify({ 'path' => '/bar', 'owner' => 'bianca' }), 'different owner, sibling resource' );
     ok( $mgr->can_modify({ 'path' => '/bar/c/d/e/f', 'owner' => 'bianca' }), 'different owner, descendant of sibling resource with lock' );
