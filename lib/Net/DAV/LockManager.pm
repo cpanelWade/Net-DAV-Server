@@ -23,26 +23,24 @@ sub can_modify {
     _validate_lock_request( $req );
 
     my ($resource, $user, $token) = @{$req}{qw/path owner token/};
-    my $lock = $self->_get_lock( $resource );
+    my $lock = $self->_get_lock( $resource ) || $self->_get_indirect_lock( $resource );
 
-    if ( $lock ) {
-        return unless $token;
-        return $lock->{'owner'} eq $user && $lock->{'token'} eq $token;
+    return 1 unless $lock;
+    return unless $token;
+
+    return $lock->{'owner'} eq $user && $lock->{'token'} eq $token;
+}
+
+sub _get_indirect_lock {
+    my ($self, $res) = @_;
+
+    while( $res =~ s{/[^/]+$}{} ) {
+        $res = '/' unless length $res;
+        my $lock = $self->_get_lock( $res );
+        return $lock if $lock && $lock->{'depth'} eq 'infinity';
     }
 
-    # Check indirect locking, though ancestors.
-    my $ancestor = $resource;
-    while( $ancestor =~ s{/[^/]+$}{} ) {
-        $ancestor = '/' unless length $ancestor;
-        $lock = $self->_get_lock( $ancestor );
-        if ( $lock ) {
-            next unless $lock->{'depth'} eq 'infinity';
-            return unless $token;
-            return $lock->{'owner'} eq $user && $lock->{'token'} eq $token;
-        }
-    }
-
-    return 1;
+    return;
 }
 
 sub lock {
