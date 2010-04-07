@@ -7,13 +7,15 @@ use strict;
 use warnings;
 
 use Net::DAV::LockManager ();
+use Net::DAV::LockManager::Simple ();
 use Net::DAV::UUID ();
 
 # Exploits an implementation detail
 my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fred' );
 
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
 
     ok( !defined $mgr->refresh_lock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $mock_token }),
         'Can not refresh a non-existent lock' );
@@ -21,7 +23,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 
 # Fail to refresh
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
 
     ok( !defined $mgr->refresh_lock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $mock_token }),
@@ -32,7 +35,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 }
 
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
     my $token = $lck->{'token'};
 
@@ -43,7 +47,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 }
 
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
     my $token = $lck->{'token'};
 

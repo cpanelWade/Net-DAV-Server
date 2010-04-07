@@ -7,20 +7,23 @@ use strict;
 use warnings;
 
 use Net::DAV::LockManager ();
+use Net::DAV::LockManager::Simple ();
 use Net::DAV::UUID ();
 
 # Exploits an implementation detail
 my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fred' );
 
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
 
     ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $mock_token }),
         'Can not unlock a non-existent lock' );
 }
 
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'bianca' });
 
     ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $lck->{'token'} }),
@@ -28,7 +31,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 }
 
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/tmp', 'owner' => 'fred' });
 
     ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $lck->{'token'} }),
@@ -36,7 +40,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 }
 
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/tmp/file1', 'owner' => 'fred' });
 
     ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $lck->{'token'} }),
@@ -44,7 +49,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 }
 
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
 
     ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $mock_token }),
@@ -52,7 +58,8 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 }
 
 {
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
     ok( !$mgr->can_modify({ 'path' => '/tmp/file', 'owner' => 'bianca' }), 'Can not modify locked resource.' );
 

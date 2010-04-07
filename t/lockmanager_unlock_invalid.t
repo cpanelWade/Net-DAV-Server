@@ -7,10 +7,12 @@ use strict;
 use warnings;
 
 use Net::DAV::LockManager ();
+use Net::DAV::LockManager::Simple ();
 
 {
     # Validate parameters
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     did_die( sub { $mgr->unlock() },                          qr/hash reference/,           'No args' );
     did_die( sub { $mgr->unlock( 'fred' ) },                  qr/hash reference/,           'String arg' );
     did_die( sub { $mgr->unlock({}) },                        qr/Missing required/,         'No params' );
@@ -21,7 +23,8 @@ use Net::DAV::LockManager ();
 
 {
     # Path checking
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     foreach my $path ( '', qw{/.. /fred/.. /../fred /fred/../bianca /fred/ fred/ fred} ) {
         did_die( sub { $mgr->unlock({ 'path' => $path, 'owner'=>'gwj', 'token' => '1234' }) }, qr/Not a clean path/, "$path: Not an allowed path" );
     }
@@ -29,7 +32,8 @@ use Net::DAV::LockManager ();
 
 {
     # Owner checking
-    my $mgr = Net::DAV::LockManager->new();
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
     foreach my $owner ( '', qw{aa()bb /fred/ ab+cd 1fred} ) {
         did_die( sub { $mgr->unlock({ 'path' => '/fred/foo', 'owner'=>$owner, 'token' => '1234' }) }, qr/Not a valid owner/, "$owner Not an allowed owner" );
     }
