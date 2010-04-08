@@ -19,7 +19,7 @@ sub reduce {
 
 my @db_drivers = (
     sub { return ('Net::DAV::LockManager::DB'       => Net::DAV::LockManager::DB->new()) },
-    sub { return ('Net::DAV::LockManager::Simple'   => Net::DAV::LockManager::DB->new()) }
+    sub { return ('Net::DAV::LockManager::Simple'   => Net::DAV::LockManager::Simple->new()) }
 );
 
 my $test_data = {
