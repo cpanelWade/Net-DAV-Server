@@ -45,6 +45,11 @@ sub new {
     }
 
     #
+    # Die if the expiry passed is a date in the past.
+    #
+    die('Lock expiry is a date in the past') if $hash->{'expiry'} < time();
+
+    #
     # Calculate and store a new UUID based on the path and owner
     # specified, if none is present.
     #
@@ -77,7 +82,7 @@ sub token {
 sub renew {
     my ($self, $expiry) = @_;
 
-    die('New lock expiration date is not in the future') unless $expiry - time() > 0;
+    die('New lock expiration date is not in the future') unless $expiry > time();
 
     $self->{'expiry'} = $expiry;
 
