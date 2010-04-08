@@ -75,7 +75,7 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
     my $lck2 = $mgr->lock({ 'path' => '/tmp/subdir', 'owner' => 'fred' });
     my $lck3 = $mgr->lock({ 'path' => '/tmp/junk', 'owner' => 'fred' });
 
-    ok( !$mgr->unlock({ 'path' => '/tmp/subdir', 'owner' => 'fred', 'token' => $lck2->token }), 'remove middle lock' );
+    ok( $mgr->unlock({ 'path' => '/tmp/subdir', 'owner' => 'fred', 'token' => $lck2->token }), 'remove middle lock' );
     ok( !$mgr->can_modify({ 'path' => '/tmp/file', 'owner' => 'bianca' }), 'Can not modify first locked resource.' );
     ok( !$mgr->can_modify({ 'path' => '/tmp/junk', 'owner' => 'bianca' }), 'Can not modify last locked resource.' );
 }
