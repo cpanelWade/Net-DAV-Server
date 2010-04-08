@@ -25,7 +25,7 @@ sub new {
 
     die('Lock expiry is a date in the past') if $hash->{'expiry'} < time();
     die('Owner contains invalid characters') unless $hash->{'owner'} =~ /^[a-z_.][-a-z0-9_.]*$/;
-    die('Depth is a non-RFC 4918 value: ' . $hash->{'depth'}) unless $hash->{'depth'} =~ /^(0|infinity)$/;
+    die('Depth is a non-RFC 4918 value') unless $hash->{'depth'} =~ /^(0|infinity)$/;
     die('Scope is an unsupported value') unless $hash->{'scope'} eq 'exclusive';
 
     #
