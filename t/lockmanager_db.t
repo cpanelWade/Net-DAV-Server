@@ -1,11 +1,12 @@
 #!/usr/bin/perl
 
-use Test::More tests => 11;
+use Test::More tests => 22;
 use Carp;
 
 use strict;
 use warnings;
 
+use Net::DAV::LockManager::Simple ();
 use Net::DAV::LockManager::DB ();
 
 sub reduce {
@@ -16,33 +17,39 @@ sub reduce {
     }
 }
 
-my $db = Net::DAV::LockManager::DB->new();
+my @db_drivers = (
+    sub { return ('DB'      => Net::DAV::LockManager::DB->new()) },
+    sub { return ('Simple'  => Net::DAV::LockManager::DB->new()) }
+);
 
-foreach my $path (qw(/ /foo /foo/bar /foo/bar/baz /foo/meow)) {
-    $db->add(Net::DAV::Lock->new({
-        'expiry'    => time() + 720,
-        'owner'     => 'alice',
-        'depth'     => 'infinite',
-        'scope'     => 'exclusive',
-        'path'      => $path
-    }));
-}
-
-my $tests = {
+my $test_data = {
     '/'         => [qw(/foo /foo/bar /foo/bar/baz /foo/meow)],
     '/foo'      => [qw(/foo/bar /foo/bar/baz /foo/meow)],
     '/foo/bar'  => [qw(/foo/bar/baz)]
 };
 
-{
-    while (my ($ancestor, $descendants) = each(%$tests)) {
+foreach my $db_driver (@db_drivers) {
+    my ($db_type, $db) = $db_driver->();
+
+    foreach my $path (qw(/ /foo /foo/bar /foo/bar/baz /foo/meow)) {
+        $db->add(Net::DAV::Lock->new({
+            'expiry'    => time() + 720,
+            'owner'     => 'alice',
+            'depth'     => 'infinite',
+            'scope'     => 'exclusive',
+            'path'      => $path
+        }));
+    }
+
+    while (my ($ancestor, $descendants) = each(%$test_data)) {
         my @locks = $db->list_descendants($ancestor);
 
         #
         # list_descendants() should return the exact number of items specified
         # in this particular test.
         #
-        my $message = sprintf("list_descendants() returned %d items for %s", scalar @$descendants, $ancestor);
+        my $message = sprintf("[%s] list_descendants() returned %d items for %s",
+          $db_type, scalar @$descendants, $ancestor);
 
         ok(scalar @locks == scalar @$descendants, $message);
 
@@ -52,7 +59,7 @@ my $tests = {
         foreach my $path (@$descendants) {
             ok(defined reduce(sub {
                 return shift->path eq $path
-            }, @locks), "list_descendants() contains lock for $path");
+            }, @locks), "[$db_type] list_descendants() contains lock for $path");
         }
     }
 }
