@@ -15,9 +15,6 @@ my %uuids = ();
 # found after this test is not exactly 10000, this should be considered a
 # failure.
 #
-
-for (my $i=0; $i<10000; $i++) {
-    $uuids{Net::DAV::UUID::generate("/foo/bar/baz", "tom")} = 1;
-}
+$uuids{Net::DAV::UUID::generate("/foo/bar/baz", "tom")} = 1 foreach (1..10000);
 
 ok(scalar keys %uuids == 10000, "UUID generator produced 10000 unique identifiers");
