@@ -9,6 +9,7 @@ use Net::DAV::UUID;
 my $MAX_LOCK_TIMEOUT        = 15 * 60;
 my $DEFAULT_LOCK_TIMEOUT    = $MAX_LOCK_TIMEOUT;
 my $DEFAULT_DEPTH           = 'infinity'; # as per RFC 4918, section 9.10.3, paragraph 5
+my $DEFAULT_SCOPE           = 'exclusive';
 
 sub new {
     my ($class, $db) = (shift, shift);
@@ -45,7 +46,7 @@ sub lock {
 
     my $expiry = time() + $timeout;
     my $depth = defined $req->{'depth'}? $req->{'depth'}: $DEFAULT_DEPTH;
-    my $scope = $req->{'scope'} || 'exclusive';
+    my $scope = $req->{'scope'} || $DEFAULT_SCOPE;
 
     return undef unless $self->can_modify( $req ) && !$self->_get_lock( $path );
     foreach my $lock ( $self->{'db'}->list_descendants( $path ) ) {
@@ -190,7 +191,7 @@ sub _validate_lock_request {
     die "Not a valid owner name.\n" unless $req->{'owner'} =~ m{^[a-z_.][-a-z0-9_.]*$}i;  # May need better validation.
 
     # Validate optional parameters as necessary.
-    if( exists $req->{'scope'} && 'exclusive' ne $req->{'scope'} ) {
+    if( exists $req->{'scope'} && $DEFAULT_SCOPE ne $req->{'scope'} ) {
         die "'$req->{'scope'}' is not a supported value for scope.\n";
     }
 
