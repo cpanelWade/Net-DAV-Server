@@ -215,3 +215,8 @@ sub remove {
 }
 
 1;
+
+__END__
+Copyright (c) 2010, cPanel, Inc. All rights reserved.
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself. See L<perlartistic>.
