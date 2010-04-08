@@ -48,6 +48,17 @@ sub get {
 }
 
 #
+# Given a path string, return all objects indexed whose path is a descendant
+# of the one specified.
+#
+sub list_descendants {
+    my ($self, $path) = @_;
+
+    return grep { $_->path ne '/' } @$self if $path eq '/';
+    return grep { index($_->path, "$path/") == 0 } @$self;
+}
+
+#
 # Given a Net::DAV::Lock object, replace any other locks whose
 # path corresponds to that which is stored in the list.
 #
@@ -86,11 +97,6 @@ sub remove {
             splice @$self, $i, 1;
         }
     }
-}
-
-sub list_descendants {
-    my ($self, $path) = @_;
-    return grep { $_->path =~ m{^$path/} } @{$self};
 }
 
 1;
