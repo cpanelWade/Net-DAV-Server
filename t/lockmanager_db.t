@@ -18,8 +18,8 @@ sub reduce {
 }
 
 my @db_drivers = (
-    sub { return ('DB'      => Net::DAV::LockManager::DB->new()) },
-    sub { return ('Simple'  => Net::DAV::LockManager::DB->new()) }
+    sub { return ('Net::DAV::LockManager::DB'       => Net::DAV::LockManager::DB->new()) },
+    sub { return ('Net::DAV::LockManager::Simple'   => Net::DAV::LockManager::DB->new()) }
 );
 
 my $test_data = {
@@ -48,7 +48,7 @@ foreach my $db_driver (@db_drivers) {
         # list_descendants() should return the exact number of items specified
         # in this particular test.
         #
-        my $message = sprintf("[%s] list_descendants() returned %d items for %s",
+        my $message = sprintf("%s::list_descendants() returned %d items for %s",
           $db_type, scalar @$descendants, $ancestor);
 
         ok(scalar @locks == scalar @$descendants, $message);
@@ -59,7 +59,7 @@ foreach my $db_driver (@db_drivers) {
         foreach my $path (@$descendants) {
             ok(defined reduce(sub {
                 return shift->path eq $path
-            }, @locks), "[$db_type] list_descendants() contains lock for $path");
+            }, @locks), "$db_type\::list_descendants() contains lock for $path");
         }
     }
 }
