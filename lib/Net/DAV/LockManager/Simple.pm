@@ -88,6 +88,11 @@ sub remove {
     }
 }
 
+sub list_descendants {
+    my ($self, $path) = @_;
+    return grep { $_->path =~ m{^$path/} } @{$self};
+}
+
 1;
 
 __END__
