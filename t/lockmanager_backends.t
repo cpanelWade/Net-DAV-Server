@@ -44,7 +44,7 @@ foreach my $db_driver (@db_drivers) {
         'path'      => $path
     }));
 
-    ok(defined $lock, "$db_type\::add() able to add lock entries to the database");
+    ok(ref $lock eq "Net::DAV::Lock", "$db_type\::add() able to add lock entries to the database");
     ok($db->get($path)->path eq $path, "$db_type\::get() able to locate lock entries by path");
 
     my $new_expiry = time() + 86400;
@@ -89,9 +89,9 @@ foreach my $db_driver (@db_drivers) {
         # Check to see if the objects returned are actually the right ones.
         #
         foreach my $path (@$descendants) {
-            ok(defined reduce(sub {
+            ok(ref reduce(sub {
                 return shift->path eq $path
-            }, @locks), "$db_type\::list_descendants() contains lock for $path");
+            }, @locks) eq "Net::DAV::Lock", "$db_type\::list_descendants() contains lock for $path");
         }
     }
 
