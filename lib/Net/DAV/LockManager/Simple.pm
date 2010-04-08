@@ -13,14 +13,13 @@ use strict;
 #
 
 #
-# Create a new lock manager context.  Optionally accepts an array reference
+# Create a new lock manager context.  Optionally accepts an array
 # containing a default set of locks.
 #
 sub new {
     my $class = shift;
-    my $self = $_[0]? $_[0]: [];
 
-    return bless $self, $class;
+    return bless \@_, $class;
 }
 
 #
