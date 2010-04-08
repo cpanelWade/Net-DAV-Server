@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-use Test::More tests => 3;
+use Test::More tests => 5;
 use Carp;
 
 use strict;
@@ -13,12 +13,40 @@ use Net::DAV::Lock ();
         Net::DAV::Lock->new({
             'expiry'    => time() + 120,
             'owner'     => 'klaude',
-            'depth'     => 'infinite',
+            'depth'     => 'infinity',
             'scope'     => 'exclusive',
         });
     };
 
     ok($@ ne '', "Warning was thrown at object creation time for missing path");
+}
+
+{
+    eval {
+        Net::DAV::Lock->new({
+            'expiry'    => time() + 120,
+            'owner'     => 'kevin',
+            'depth'     => 5,
+            'scope'     => 'exclusive',
+            'path'      => '/foo'
+        });
+    };
+
+    ok($@ ne '', 'Warning was thrown at object creation time for non-RFC 4918 depth');
+}
+
+{
+    eval {
+        Net::DAV::Lock->new({
+            'expiry'    => time() + 120,
+            'owner'     => 'kevin',
+            'depth'     => 0,
+            'scope'     => 'poop',
+            'path'      => '/foo'
+        });
+    };
+
+    ok($@ ne '', 'Warning was thrown at object creation time for unsupported scope');
 }
 
 #
@@ -30,7 +58,7 @@ use Net::DAV::Lock ();
         Net::DAV::Lock->new({
             'expiry'    => 100,
             'owner'     => 'klaude',
-            'depth'     => 'infinite',
+            'depth'     => 'infinity',
             'scope'     => 'exclusive',
             'path'      => '/foo'
         });
@@ -43,7 +71,7 @@ use Net::DAV::Lock ();
     my $lock = Net::DAV::Lock->new({
         'expiry'    => time() + 120,
         'owner'     => 'klaude',
-        'depth'     => 'infinite',
+        'depth'     => 'infinity',
         'scope'     => 'exclusive',
         'path'      => '/foo'
     });
