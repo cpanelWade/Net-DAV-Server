@@ -168,6 +168,12 @@ sub get {
 sub list_descendants {
     my ($self, $path) = @_;
 
+    if ($path eq '/') {
+        return map {
+            Net::DAV::Lock->new($_)
+        } @{$self->{'db'}->selectall_arrayref(q(select * from lock where path != '/'), { 'Slice' => {} })};
+    }
+
     my $sql = q/select * from lock where path like ?/;
 
     return map {
