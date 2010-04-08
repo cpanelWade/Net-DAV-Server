@@ -48,6 +48,9 @@ sub lock {
     my $scope = $req->{'scope'} || 'exclusive';
 
     return undef unless $self->can_modify( $req ) && !$self->_get_lock( $path );
+    foreach my $lock ( $self->{'db'}->list_descendants( $path ) ) {
+        return undef unless _is_permitted( $req, $lock );
+    }
 
     return $self->_add_lock(Net::DAV::Lock->new({
         'path'      => $path,
