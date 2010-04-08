@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 22;
+use Test::More tests => 30;
 use Carp;
 
 use strict;
@@ -28,6 +28,38 @@ my $test_data = {
     '/foo/bar'  => [qw(/foo/bar/baz)]
 };
 
+#
+# Verify that simple lock database CRUD operations function properly.
+#
+foreach my $db_driver (@db_drivers) {
+    my ($db_type, $db) = $db_driver->();
+
+    my $path = "/foo";
+
+    my $lock = $db->add(Net::DAV::Lock->new({
+        'expiry'    => time() + 720,
+        'owner'     => 'alice',
+        'depth'     => 'infinite',
+        'scope'     => 'exclusive',
+        'path'      => $path
+    }));
+
+    ok(defined $lock, "$db_type\::add() able to add lock entries to the database");
+    ok($db->get($path)->path eq $path, "$db_type\::get() able to locate lock entries by path");
+
+    my $new_expiry = time() + 86400;
+    $lock->renew($new_expiry);
+    ok($db->update($lock)->expiry == $new_expiry, "$db_type\::update() is able to update/renew locks");
+
+    $db->remove($lock);
+    ok(!defined $db->get($path), "$db_type\::remove() actually removes lock entry");
+
+    $db->close();
+}
+
+#
+# Verify that recursive lock lookup works.
+#
 foreach my $db_driver (@db_drivers) {
     my ($db_type, $db) = $db_driver->();
 
@@ -62,4 +94,6 @@ foreach my $db_driver (@db_drivers) {
             }, @locks), "$db_type\::list_descendants() contains lock for $path");
         }
     }
+
+    $db->close();
 }
