@@ -162,6 +162,20 @@ sub get {
 }
 
 #
+# Given a path string, return any lock objects whose paths are descendants
+# of the specified path, excluding the current path.
+#
+sub list_descendants {
+    my ($self, $path) = @_;
+
+    my $sql = q/select * from lock where path like ?/;
+
+    return map {
+        Net::DAV::Lock->new($_)
+    } @{$self->{'db'}->selectall_arrayref($sql, { 'Slice' => {} }, "$path/%")};
+}
+
+#
 # Given an instance of Net::DAV::Lock, update any entries in the
 # database whose path corresponds to the value provided in the
 # object.
