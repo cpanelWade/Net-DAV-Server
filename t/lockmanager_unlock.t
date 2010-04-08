@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 8;
+use Test::More tests => 11;
 use Carp;
 
 use strict;
@@ -66,5 +66,17 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
     ok( $mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $lck->token }),
         'Successfully unlocked resource' );
     ok( $mgr->can_modify({ 'path' => '/tmp/file', 'owner' => 'bianca' }), 'Can modify unlocked resource.' );
+}
+
+{
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new( $db );
+    my $lck1 = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
+    my $lck2 = $mgr->lock({ 'path' => '/tmp/subdir', 'owner' => 'fred' });
+    my $lck3 = $mgr->lock({ 'path' => '/tmp/junk', 'owner' => 'fred' });
+
+    ok( !$mgr->unlock({ 'path' => '/tmp/subdir', 'owner' => 'fred', 'token' => $lck2->token }), 'remove middle lock' );
+    ok( !$mgr->can_modify({ 'path' => '/tmp/file', 'owner' => 'bianca' }), 'Can not modify first locked resource.' );
+    ok( !$mgr->can_modify({ 'path' => '/tmp/junk', 'owner' => 'bianca' }), 'Can not modify last locked resource.' );
 }
 
