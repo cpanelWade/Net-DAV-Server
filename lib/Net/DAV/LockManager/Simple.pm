@@ -83,7 +83,7 @@ sub remove {
 
     for (my $i=0; $$self[$i]; $i++) {
         if ($$self[$i]->path eq $lock->path) {
-            splice @$self, $i;
+            splice @$self, $i, 1;
         }
     }
 }
