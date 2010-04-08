@@ -33,19 +33,6 @@ sub can_modify {
     return _is_permitted( $req, $lock );
 }
 
-sub _get_indirect_lock {
-    my ($self, $res) = @_;
-
-    while ( $res =~ s{/[^/]+$}{} ) {
-        $res = '/' unless length $res;
-
-        my $lock = $self->_get_lock( $res );
-        return $lock if $lock && $lock->depth eq 'infinity';
-    }
-
-    return;
-}
-
 sub lock {
     my ($self, $req) = @_;
 
@@ -60,7 +47,7 @@ sub lock {
     my $depth = defined $req->{'depth'}? $req->{'depth'}: $DEFAULT_DEPTH;
     my $scope = $req->{'scope'} || 'exclusive';
 
-    return unless $self->can_modify( $req ) && !$self->_get_lock( $path );
+    return undef unless $self->can_modify( $req ) && !$self->_get_lock( $path );
 
     return $self->_add_lock(Net::DAV::Lock->new({
         'path'      => $path,
@@ -77,7 +64,7 @@ sub refresh_lock {
 
     my $lock = $self->_get_lock( $req->{'path'} );
     return undef unless $lock;
-    return unless _is_permitted( $req, $lock );
+    return undef unless _is_permitted( $req, $lock );
 
     $lock->renew( time() + ($req->{'timeout'} || $DEFAULT_LOCK_TIMEOUT) );
 
@@ -92,7 +79,7 @@ sub unlock {
     return 0 unless $lock;
     return 0 unless _is_permitted( $req, $lock );
 
-    $self->_clear_lock( $lock );
+    $self->_remove_lock( $lock );
 
     return 1;
 }
@@ -110,7 +97,7 @@ sub _get_lock {
     return undef unless $lock;
 
     if (time() >= $lock->expiry) {
-        $self->_clear_lock($lock);
+        $self->_remove_lock($lock);
 
         return undef;
     }
@@ -139,12 +126,29 @@ sub _update_lock {
 #
 # Remove the lock object passed from the database.
 #
-sub _clear_lock {
+sub _remove_lock {
     my ($self, $lock) = @_;
 
     $self->{'db'}->remove($lock);
 
     return 1;
+}
+
+#
+# Get the lock of the nearest ancestor that applies to this resource.
+# Returns undef if none found.
+#
+sub _get_indirect_lock {
+    my ($self, $res) = @_;
+
+    while ( $res =~ s{/[^/]+$}{} ) {
+        $res = '/' unless length $res;
+
+        my $lock = $self->_get_lock( $res );
+        return $lock if $lock && $lock->depth eq 'infinity';
+    }
+
+    return;
 }
 
 #
@@ -155,7 +159,7 @@ sub _clear_lock {
 sub _is_permitted {
     my ($req, $lock) = @_;
 
-    return 0 unless defined $req->{'owner'} && $req->{'owner'} eq $lock->owner;
+    return 0 unless $req->{'owner'} eq $lock->owner;
     return 0 unless defined $req->{'token'} && $req->{'token'} eq $lock->token;
 
     return 1;
@@ -199,3 +203,9 @@ sub _validate_lock_request {
 }
 
 1;
+
+__END__
+Copyright (c) 2010, cPanel, Inc. All rights reserved.
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself. See L<perlartistic>.
+
