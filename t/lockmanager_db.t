@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 1;
+use Test::More tests => 4;
 use Carp;
 
 use strict;
@@ -16,37 +16,43 @@ sub reduce {
     }
 }
 
-#
-# Verify that Net::DAV::LockManager::DB->list_descendants() works properly.
-#
+my $db = Net::DAV::LockManager::DB->new();
+
+foreach my $path (qw(/ /foo /foo/bar /foo/bar/baz /foo/meow)) {
+    $db->add(Net::DAV::Lock->new({
+        'expiry'    => time() + 720,
+        'owner'     => 'alice',
+        'depth'     => 'infinite',
+        'scope'     => 'exclusive',
+        'path'      => $path
+    }));
+}
+
+my $tests = {
+    '/'         => [qw(/foo /foo/bar /foo/bar/baz /foo/meow)],
+    '/foo'      => [qw(/foo/bar /foo/bar/baz /foo/meow)],
+    '/foo/bar'  => [qw(/foo/bar/baz)]
+};
+
 {
-    my $db = Net::DAV::LockManager::DB->new();
+    while (my ($ancestor, $descendants) = each(%$tests)) {
+        my @locks = $db->list_descendants($ancestor);
 
-    foreach my $path (qw(/ /foo /foo/bar /foo/bar/baz /foo/meow)) {
-        $db->add(Net::DAV::Lock->new({
-            'expiry'    => time() + 720,
-            'owner'     => 'alice',
-            'depth'     => 'infinite',
-            'scope'     => 'exclusive',
-            'path'      => $path
-        }));
+        #
+        # list_descendants() should return the exact number of items specified
+        # in this particular test.
+        #
+        my $message = sprintf("list_descendants() returned %d items for %s", scalar @$descendants, $ancestor);
+
+        ok(scalar @locks == scalar @$descendants, $message);
+
+        #
+        # Check to see if the objects returned are actually the right ones.
+        #
+        foreach my $path (@$descendants) {
+            ok(defined reduce(sub {
+                return shift->path eq $path
+            }, @locks), "list_descendants() contains lock for $path");
+        }
     }
-
-    my @locks = $db->list_descendants('/foo');
-
-    #
-    # list_descendants() should return exactly three items.
-    #
-    ok(scalar @locks == 3, "Net::DAV::LockManager::DB->list_descendants() returns expected number of results");
-
-    #
-    # Check to see if the objects returned are actually the right ones.
-    #
-    foreach my $path (qw(/foo/bar /foo/bar/baz /foo/meow)) {
-        ok(defined reduce(sub {
-            return shift->path eq $path
-        }, @locks), "Net::DAV::LockManager::DB->list_descendants() contains lock for $path");
-    }
-
-    $db->close();
 }
