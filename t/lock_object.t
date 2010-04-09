@@ -1,12 +1,23 @@
 #! /usr/bin/perl
 
-use Test::More tests => 5;
+use Test::More tests => 8;
 use Carp;
 
 use strict;
 use warnings;
 
 use Net::DAV::Lock ();
+
+{
+    my $lock = Net::DAV::Lock->new({
+        'owner'     => 'gary',
+        'path'      => '/foo/bar'
+    });
+
+    ok($lock->expiry - time() >= $Net::DAV::Lock::DEFAULT_LOCK_TIMEOUT, 'Default lock timeout is assumed at instantiation');
+    ok($lock->depth eq $Net::DAV::Lock::DEFAULT_DEPTH, 'Default depth is assumed at instantiation');
+    ok($lock->scope eq $Net::DAV::Lock::DEFAULT_SCOPE, 'Default scope is assumed at instantiation');
+}
 
 {
     eval {
