@@ -2,50 +2,45 @@ package Net::DAV::Lock;
 
 use Net::DAV::UUID;
 
-my %properties = (
-    'expiry' => 0, 'owner' => 0, 'depth' => 0, 'scope' => 0, 'path' => 0, 'uuid' => 1
-);
-
-sub INIT {
-    #
-    # Create read-only accessors for each property listed above.
-    #
-    foreach my $property (keys %properties) {
-        no strict 'refs';
-
-        *{$property} = sub {
-            return shift->{$property};
-        };
-    }
-}
+our $MAX_LOCK_TIMEOUT        = 15 * 60;
+our $DEFAULT_LOCK_TIMEOUT    = $MAX_LOCK_TIMEOUT;
+our $DEFAULT_DEPTH           = 'infinity'; # as per RFC 4918, section 9.10.3, paragraph 5
+our $DEFAULT_SCOPE           = 'exclusive';
 
 sub new {
     my ($class, $hash) = @_;
     my $obj = {};
 
-    die('Lock expiry is a date in the past') if $hash->{'expiry'} < time();
+    die('Missing path value') unless defined $hash->{'path'};
+    $obj->{'path'} = $hash->{'path'};
+
+    die('Missing owner value') unless defined $hash->{'owner'};
     die('Owner contains invalid characters') unless $hash->{'owner'} =~ /^[a-z_.][-a-z0-9_.]*$/;
-    die('Depth is a non-RFC 4918 value') unless $hash->{'depth'} =~ /^(0|infinity)$/;
-    die('Scope is an unsupported value') unless $hash->{'scope'} eq 'exclusive';
+    $obj->{'owner'} = $hash->{'owner'};
 
-    #
-    # Copy the required parameters from the anonymous hash provided as
-    # input.  Die if any required values are missing.
-    #
-    while (my ($property, $is_optional) = each(%properties)) {
-        #
-        # For non-optional arguments, ensure a value in the hash prodided
-        # exists.
-        #
-        unless (defined $hash->{$property} || $is_optional) {
-            die("Missing value for '$property' property");
-        }
-
-        #
-        # Copy the value over from the input hash into the new object.
-        #
-        $obj->{$property} = $hash->{$property};
+    if (defined $hash->{'expiry'}) {
+        die('Lock expiry is a date in the past') if $hash->{'expiry'} < time();
+        die('Lock expiry exceeds maximum value') if ($hash->{'expiry'} - time() > $MAX_LOCK_TIMEOUT);
+        $obj->{'expiry'} = $hash->{'expiry'};
+    } else {
+        $obj->{'expiry'} = time() + $DEFAULT_LOCK_TIMEOUT;
     }
+
+    if (defined $hash->{'depth'}) {
+        die('Depth is a non-RFC 4918 value') unless $hash->{'depth'} =~ /^(0|infinity)$/;
+        $obj->{'depth'} = $hash->{'depth'};
+    } else {
+        $obj->{'depth'} = $DEFAULT_DEPTH;
+    }
+
+    if (defined $hash->{'scope'}) {
+        die('Scope is an unsupported value') unless $hash->{'scope'} eq 'exclusive';
+        $obj->{'scope'} = $hash->{'scope'};
+    } else {
+        $obj->{'scope'} = $DEFAULT_SCOPE;
+    }
+
+    $obj->{'uri'} = $hash->{'uri'};
 
     #
     # Calculate and store a new UUID based on the path and owner
@@ -57,6 +52,14 @@ sub new {
 
     return bless $obj, $class;
 }
+
+sub expiry { shift->{'expiry'} };
+sub owner { shift->{'owner'} };
+sub depth { shift->{'depth'} };
+sub scope { shift->{'scope'} };
+sub path { shift->{'path'} };
+sub uuid { shift->{'uuid'} };
+
 
 #
 # Provide a wrapper method to return a token URI based on the UUID

@@ -5,11 +5,7 @@ use warnings;
 
 use File::Spec ();
 use Net::DAV::UUID;
-
-my $MAX_LOCK_TIMEOUT        = 15 * 60;
-my $DEFAULT_LOCK_TIMEOUT    = $MAX_LOCK_TIMEOUT;
-my $DEFAULT_DEPTH           = 'infinity'; # as per RFC 4918, section 9.10.3, paragraph 5
-my $DEFAULT_SCOPE           = 'exclusive';
+use Net::DAV::Lock;
 
 sub new {
     my ($class, $db) = (shift, shift);
@@ -40,13 +36,13 @@ sub lock {
     _validate_lock_request( $req );
 
     my $path = $req->{'path'};
-    my $timeout = $req->{'timeout'} || $DEFAULT_LOCK_TIMEOUT;
+    my $timeout = $req->{'timeout'} || $Net::DAV::Lock::DEFAULT_LOCK_TIMEOUT;
 
-    $timeout = $MAX_LOCK_TIMEOUT if $timeout > $MAX_LOCK_TIMEOUT;
+    $timeout = $Net::DAV::Lock::MAX_LOCK_TIMEOUT if $timeout > $Net::DAV::Lock::MAX_LOCK_TIMEOUT;
 
     my $expiry = time() + $timeout;
-    my $depth = defined $req->{'depth'}? $req->{'depth'}: $DEFAULT_DEPTH;
-    my $scope = $req->{'scope'} || $DEFAULT_SCOPE;
+    my $depth = defined $req->{'depth'}? $req->{'depth'}: $Net::DAV::Lock::DEFAULT_DEPTH;
+    my $scope = $req->{'scope'} || $Net::DAV::Lock::DEFAULT_SCOPE;
 
     return undef unless $self->can_modify( $req ) && !$self->_get_lock( $path );
     foreach my $lock ( $self->{'db'}->list_descendants( $path ) ) {
@@ -70,7 +66,7 @@ sub refresh_lock {
     return undef unless $lock;
     return undef unless _is_permitted( $req, $lock );
 
-    $lock->renew( time() + ($req->{'timeout'} || $DEFAULT_LOCK_TIMEOUT) );
+    $lock->renew( time() + ($req->{'timeout'} || $Net::DAV::Lock::DEFAULT_LOCK_TIMEOUT) );
 
     return $self->_update_lock( $lock );
 }
@@ -197,19 +193,19 @@ sub _validate_lock_request {
     die "Not a valid owner name.\n" unless $req->{'owner'} =~ m{^[a-z_.][-a-z0-9_.]*$}i;  # May need better validation.
 
     # Validate optional parameters as necessary.
-    if( exists $req->{'scope'} && $DEFAULT_SCOPE ne $req->{'scope'} ) {
+    if( defined $req->{'scope'} && $Net::DAV::Lock::DEFAULT_SCOPE ne $req->{'scope'} ) {
         die "'$req->{'scope'}' is not a supported value for scope.\n";
     }
 
-    if( exists $req->{'depth'} && '0' ne $req->{'depth'} && 'infinity' ne $req->{'depth'} ) {
+    if( defined $req->{'depth'} && '0' ne $req->{'depth'} && 'infinity' ne $req->{'depth'} ) {
         die "'$req->{'depth'}' is not a supported value for depth.\n";
     }
 
-    if( exists $req->{'timeout'} && $req->{'timeout'} =~ /\D/ ) {
+    if( defined $req->{'timeout'} && $req->{'timeout'} =~ /\D/ ) {
         die "'$req->{'timeout'}' is not a supported value for timeout.\n";
     }
 
-    if ( exists $req->{'token'} ) {
+    if ( defined $req->{'token'} ) {
         unless ( !ref $req->{'token'} || 'ARRAY' eq ref $req->{'token'} ) {
             die "Invalid token, not a string or array reference.\n";
         }
