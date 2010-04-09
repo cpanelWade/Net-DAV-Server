@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Carp;
 
 use strict;
@@ -37,6 +37,14 @@ use Net::DAV::LockManager::Simple ();
         did_die( sub { $mgr->can_modify({ 'path' => '/fred/foo', 'owner'=>$owner }) }, qr/Not a valid owner/, "$owner Not an allowed owner" );
     }
 }
+
+{
+    # Owner checking
+    my $db = Net::DAV::LockManager::Simple->new();
+    my $mgr = Net::DAV::LockManager->new($db);
+    did_die( sub { $mgr->can_modify({ 'path' => '/fred/foo', 'owner'=>'fred', 'token' => {} }) }, qr/Invalid token/, "Hash ref not a valid token" );
+}
+
 
 sub did_die {
     my ($code, $regex, $label) = @_;

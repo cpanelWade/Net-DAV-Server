@@ -56,7 +56,8 @@ Required parameter specifying the user that wishes to modify the resource.
 =item token
 
 Optional parameter specifying the token returned when the resource (or an
-ancestor) was locked.
+ancestor) was locked. This parameter may be either a single token as a string
+or an array reference containing token strings.
 
 =back
 
@@ -102,8 +103,9 @@ The default value is I<exclusive>.
 
 =item token
 
-Optional parameter specifying the token returned when an ancestor of the
-the specified resource was locked.
+Optional parameter specifying the token returned when an ancestor of the the
+specified resource was locked. This parameter may be either a single token as
+a string or an array reference containing token strings.
 
 =back
 
@@ -130,7 +132,8 @@ name must match the owner of the lock.
 =item token
 
 Required parameter specifying the token returned when the resource (or an
-ancestor) was locked.
+ancestor) was locked. This parameter may be either a single token as a string
+or an array reference containing token strings.
 
 =item timeout
 
@@ -165,6 +168,8 @@ name must match the owner of the lock.
 =item token
 
 Required parameter specifying the token returned when the resource was locked.
+This parameter may be either a single token as a string or an array reference
+containing token strings.
 
 =back
 

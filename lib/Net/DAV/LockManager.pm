@@ -163,7 +163,13 @@ sub _is_permitted {
     my ($req, $lock) = @_;
 
     return 0 unless $req->{'owner'} eq $lock->owner;
-    return 0 unless defined $req->{'token'} && $req->{'token'} eq $lock->token;
+    return 0 if !defined $req->{'token'};
+    if ( 'ARRAY' eq ref $req->{'token'} ) {
+        return 0 unless grep { $_ eq $lock->token } @{$req->{'token'}};
+    }
+    else {
+        return 0 unless $req->{'token'} eq $lock->token;
+    }
 
     return 1;
 }
@@ -200,6 +206,12 @@ sub _validate_lock_request {
 
     if( exists $req->{'timeout'} && $req->{'timeout'} =~ /\D/ ) {
         die "'$req->{'timeout'}' is not a supported value for timeout.\n";
+    }
+
+    if ( exists $req->{'token'} ) {
+        unless ( !ref $req->{'token'} || 'ARRAY' eq ref $req->{'token'} ) {
+            die "Invalid token, not a string or array reference.\n";
+        }
     }
 
     return;
