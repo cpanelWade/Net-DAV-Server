@@ -42,7 +42,7 @@ sub lock {
 
     my $expiry = time() + $timeout;
     my $depth = defined $req->{'depth'}? $req->{'depth'}: $Net::DAV::Lock::DEFAULT_DEPTH;
-    my $scope = $req->{'scope'} || $Net::DAV::Lock::DEFAULT_SCOPE;
+    my $scope = defined $req->{'scope'}? $req->{'scope'}: $Net::DAV::Lock::DEFAULT_SCOPE;
 
     return undef unless $self->can_modify( $req ) && !$self->_get_lock( $path );
     foreach my $lock ( $self->{'db'}->list_descendants( $path ) ) {
