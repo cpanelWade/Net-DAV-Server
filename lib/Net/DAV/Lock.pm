@@ -14,9 +14,7 @@ sub INIT {
         no strict 'refs';
 
         *{$property} = sub {
-            my ($self) = @_;
-
-            return $self->{$property};
+            return shift->{$property};
         };
     }
 }
@@ -24,6 +22,11 @@ sub INIT {
 sub new {
     my ($class, $hash) = @_;
     my $obj = {};
+
+    die('Lock expiry is a date in the past') if $hash->{'expiry'} < time();
+    die('Owner contains invalid characters') unless $hash->{'owner'} =~ /^[a-z_.][-a-z0-9_.]*$/;
+    die('Depth is a non-RFC 4918 value') unless $hash->{'depth'} =~ /^(0|infinity)$/;
+    die('Scope is an unsupported value') unless $hash->{'scope'} eq 'exclusive';
 
     #
     # Copy the required parameters from the anonymous hash provided as
@@ -43,11 +46,6 @@ sub new {
         #
         $obj->{$property} = $hash->{$property};
     }
-
-    #
-    # Die if the expiry passed is a date in the past.
-    #
-    die('Lock expiry is a date in the past') if $hash->{'expiry'} < time();
 
     #
     # Calculate and store a new UUID based on the path and owner

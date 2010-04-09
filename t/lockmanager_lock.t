@@ -60,7 +60,7 @@ my $token_re = qr/^opaquelocktoken:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/
     my $token = $lck->token;
     like( $token, $token_re, 'lock root, again' );
 
-    ok( !defined $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' }), 'Cannot lock below an infinite lock' );
+    ok( !defined $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' }), 'Cannot lock below an infinity lock' );
 
     my $flck = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred', 'token' => $token });
     like( $flck->token, $token_re, 'Locking with token is allowed' );
