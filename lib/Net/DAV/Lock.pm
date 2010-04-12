@@ -52,8 +52,16 @@ sub new {
     # specified, if none is present.
     #
     if ($hash->{'uuid'}) {
+        unless ($hash->{'uuid'} =~ /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/) {
+            die('UUID is of an invalid format');
+        }
+
         $obj->{'uuid'} = $hash->{'uuid'};
     } elsif ($hash->{'token'}) {
+        unless ($hash->{'token'} =~ /^opaquelocktoken:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/) {
+            die('Token is not a UUID prefixed with the opaquelocktoken: URI namespace');
+        }
+
         my $uuid = $hash->{'token'};
         $uuid =~ s/^opaquelocktoken://;
 
