@@ -11,6 +11,8 @@ sub new {
     my ($class, $hash) = @_;
     my $obj = {};
 
+    my $now = time();
+
     die('Missing path value') unless defined $hash->{'path'};
     $obj->{'path'} = $hash->{'path'};
 
@@ -19,14 +21,14 @@ sub new {
     $obj->{'owner'} = $hash->{'owner'};
 
     if (defined $hash->{'expiry'}) {
-        die('Lock expiry is a date in the past') if $hash->{'expiry'} < time();
-        die('Lock expiry exceeds maximum value') if ($hash->{'expiry'} - time() > $MAX_LOCK_TIMEOUT);
+        die('Lock expiry is a date in the past') if $hash->{'expiry'} < $now;
+        die('Lock expiry exceeds maximum value') if ($hash->{'expiry'} - $now > $MAX_LOCK_TIMEOUT);
         $obj->{'expiry'} = $hash->{'expiry'};
     } elsif (defined $hash->{'timeout'}) {
         die('Lock timeout exceeds maximum value') if ($hash->{'timeout'} > $MAX_LOCK_TIMEOUT);
-        $obj->{'expiry'} = time() + $hash->{'timeout'};
+        $obj->{'expiry'} = $now + $hash->{'timeout'};
     } else {
-        $obj->{'expiry'} = time() + $DEFAULT_LOCK_TIMEOUT;
+        $obj->{'expiry'} = $now + $DEFAULT_LOCK_TIMEOUT;
     }
 
     if (defined $hash->{'depth'}) {
@@ -63,6 +65,17 @@ sub scope { shift->{'scope'} };
 sub path { shift->{'path'} };
 sub uuid { shift->{'uuid'} };
 
+#
+# Return the number of seconds remaining for which this lock is
+# valid, relative to the current system time.
+#
+sub timeout {
+    my ($self) = @_;
+
+    my $left = $self->{'expiry'} - time();
+
+    return $left >= 0? $left: 0;
+}
 
 #
 # Provide a wrapper method to return a token URI based on the UUID
