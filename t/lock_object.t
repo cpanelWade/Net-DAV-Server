@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-use Test::More tests => 11;
+use Test::More tests => 12;
 use Carp;
 
 use strict;
@@ -17,6 +17,16 @@ use Net::DAV::Lock ();
     ok($lock->expiry - time() >= $Net::DAV::Lock::DEFAULT_LOCK_TIMEOUT, 'Default lock expiry is assumed at instantiation');
     ok($lock->depth eq $Net::DAV::Lock::DEFAULT_DEPTH, 'Default depth is assumed at instantiation');
     ok($lock->scope eq $Net::DAV::Lock::DEFAULT_SCOPE, 'Default scope is assumed at instantiation');
+}
+
+{
+    my $lock = Net::DAV::Lock->new({
+        'owner'     => 'gary',
+        'path'      => '/foo/bar',
+        'timeout'   => 300
+    });
+
+    ok($lock->expiry >= time(), 'Timeout value instead of expiry is allowed at instantiation');
 }
 
 {

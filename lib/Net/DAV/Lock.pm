@@ -22,6 +22,9 @@ sub new {
         die('Lock expiry is a date in the past') if $hash->{'expiry'} < time();
         die('Lock expiry exceeds maximum value') if ($hash->{'expiry'} - time() > $MAX_LOCK_TIMEOUT);
         $obj->{'expiry'} = $hash->{'expiry'};
+    } elsif (defined $hash->{'timeout'}) {
+        die('Lock timeout exceeds maximum value') if ($hash->{'timeout'} > $MAX_LOCK_TIMEOUT);
+        $obj->{'expiry'} = time() + $hash->{'timeout'};
     } else {
         $obj->{'expiry'} = time() + $DEFAULT_LOCK_TIMEOUT;
     }
