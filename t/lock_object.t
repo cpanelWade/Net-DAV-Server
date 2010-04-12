@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-use Test::More tests => 14;
+use Test::More tests => 19;
 use Carp;
 
 use strict;
@@ -17,6 +17,17 @@ use Net::DAV::Lock ();
     ok($lock->expiry - time() >= $Net::DAV::Lock::DEFAULT_LOCK_TIMEOUT, 'Default lock expiry is assumed at instantiation');
     ok($lock->depth eq $Net::DAV::Lock::DEFAULT_DEPTH, 'Default depth is assumed at instantiation');
     ok($lock->scope eq $Net::DAV::Lock::DEFAULT_SCOPE, 'Default scope is assumed at instantiation');
+}
+
+{
+    eval {
+        Net::DAV::Lock->new({
+            'owner' => 'f00$bar*!#',
+            'path'  => '/foo/bar'
+        });
+    };
+
+    ok($@ ne '', 'Invalid usernames cause an error to be thrown');
 }
 
 {
@@ -44,6 +55,48 @@ use Net::DAV::Lock ();
 }
 
 {
+    my $uuid = 'deadbeef-1337-cafe-babe-f00fd00dc475';
+
+    eval {
+        Net::DAV::Lock->new({
+            'owner'     => 'gary',
+            'path'      => '/foo/bar',
+            'token'     => "poop:$uuid"
+        });
+    };
+
+    ok($@ ne '', 'Error is thrown when token with invalid URI prefix is passed');
+}
+
+{
+    my $uuid = 'deadbeef-l33t-cafe-babe-f00fd00dc475';
+
+    eval {
+        Net::DAV::Lock->new({
+            'owner'     => 'gary',
+            'path'      => '/foo/bar',
+            'token'     => "opaquelocktoken:$uuid"
+        });
+    };
+
+    ok($@ ne '', 'Error is thrown when token with invalid UUID suffix is passed');
+}
+
+{
+    my $uuid = 'deadbeef-l33t-cafe-babe-f00fd00dc475';
+
+    eval {
+        Net::DAV::Lock->new({
+            'owner' => 'gary',
+            'path'  => '/foo/bar',
+            'uuid'  => "$uuid"
+        });
+    };
+
+    ok($@ ne '', 'Error is thrown when invalid UUID is passed');
+}
+
+{
     my $lock = Net::DAV::Lock->new({
         'owner'     => 'gary',
         'path'      => '/foo/bar',
@@ -63,6 +116,18 @@ use Net::DAV::Lock ();
     };
 
     ok($@ ne '', 'Warning is thrown when an expiry beyond the maximum is specified');
+}
+
+{
+    eval {
+        Net::DAV::Lock->new({
+            'path'      => '/foo/bar',
+            'owner'     => 'cecil',
+            'timeout'   => $Net::DAV::Lock::MAX_LOCK_TIMEOUT + 1
+        });
+    };
+
+    ok($@ ne '', 'Warning is thrown when a timeout beyond the maximum is specified');
 }
 
 {
