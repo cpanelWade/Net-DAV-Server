@@ -27,7 +27,7 @@ sub new {
     }
 
     if (defined $hash->{'depth'}) {
-        die('Depth is a non-RFC 4918 value') unless $hash->{'depth'} =~ /^(0|infinity)$/;
+        die('Depth is a non-RFC 4918 value') unless $hash->{'depth'} =~ /^(?:0|infinity)$/;
         $obj->{'depth'} = $hash->{'depth'};
     } else {
         $obj->{'depth'} = $DEFAULT_DEPTH;

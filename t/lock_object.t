@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-use Test::More tests => 8;
+use Test::More tests => 11;
 use Carp;
 
 use strict;
@@ -14,7 +14,7 @@ use Net::DAV::Lock ();
         'path'      => '/foo/bar'
     });
 
-    ok($lock->expiry - time() >= $Net::DAV::Lock::DEFAULT_LOCK_TIMEOUT, 'Default lock timeout is assumed at instantiation');
+    ok($lock->expiry - time() >= $Net::DAV::Lock::DEFAULT_LOCK_TIMEOUT, 'Default lock expiry is assumed at instantiation');
     ok($lock->depth eq $Net::DAV::Lock::DEFAULT_DEPTH, 'Default depth is assumed at instantiation');
     ok($lock->scope eq $Net::DAV::Lock::DEFAULT_SCOPE, 'Default scope is assumed at instantiation');
 }
@@ -22,10 +22,41 @@ use Net::DAV::Lock ();
 {
     eval {
         Net::DAV::Lock->new({
+            'path'      => '/foo/bar',
+            'owner'     => 'cecil',
+            'expiry'    => time() + $Net::DAV::Lock::MAX_LOCK_TIMEOUT + 1
+        });
+    };
+
+    ok($@ ne '', 'Warning is thrown when an expiry beyond the maximum is specified');
+}
+
+{
+    eval {
+        Net::DAV::Lock->new({
+            'path'      => '/foo/bar'
+        });
+    };
+
+    ok($@ ne '', 'Warning is thrown when no owner is specified');
+}
+
+{
+    eval {
+        Net::DAV::Lock->new({
             'expiry'    => time() + 120,
-            'owner'     => 'klaude',
-            'depth'     => 'infinity',
-            'scope'     => 'exclusive',
+            'owner'     => 'invalid-owner-name#$'
+        });
+    };
+
+    ok($@ ne '', "Warning was thrown at object creation time for invalid owner");
+}
+
+{
+    eval {
+        Net::DAV::Lock->new({
+            'expiry'    => time() + 120,
+            'owner'     => 'klaude'
         });
     };
 
@@ -35,11 +66,9 @@ use Net::DAV::Lock ();
 {
     eval {
         Net::DAV::Lock->new({
-            'expiry'    => time() + 120,
+            'path'      => '/foo',
             'owner'     => 'kevin',
-            'depth'     => 5,
-            'scope'     => 'exclusive',
-            'path'      => '/foo'
+            'depth'     => 5
         });
     };
 
@@ -49,11 +78,9 @@ use Net::DAV::Lock ();
 {
     eval {
         Net::DAV::Lock->new({
-            'expiry'    => time() + 120,
+            'path'      => '/foo',
             'owner'     => 'kevin',
-            'depth'     => 0,
-            'scope'     => 'poop',
-            'path'      => '/foo'
+            'scope'     => 'poop'
         });
     };
 
