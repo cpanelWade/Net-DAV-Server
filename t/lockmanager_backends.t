@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 30;
+use Test::More tests => 32;
 use Carp;
 
 use strict;
@@ -47,7 +47,7 @@ foreach my $db_driver (@db_drivers) {
     ok(ref $lock eq "Net::DAV::Lock", "$db_type\::add() able to add lock entries to the database");
     ok($db->get($path)->path eq $path, "$db_type\::get() able to locate lock entries by path");
 
-    my $new_expiry = time() + 86400;
+    my $new_expiry = time() + 800;
     $lock->renew($new_expiry);
     ok($db->update($lock)->expiry == $new_expiry, "$db_type\::update() is able to update/renew locks");
     ok($db->get($path)->uuid eq $lock->uuid, "$db_type\::get() does not mangle UUIDs when reanimating Net::DAV::Lock");
