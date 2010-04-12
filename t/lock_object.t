@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-use Test::More tests => 12;
+use Test::More tests => 14;
 use Carp;
 
 use strict;
@@ -17,6 +17,30 @@ use Net::DAV::Lock ();
     ok($lock->expiry - time() >= $Net::DAV::Lock::DEFAULT_LOCK_TIMEOUT, 'Default lock expiry is assumed at instantiation');
     ok($lock->depth eq $Net::DAV::Lock::DEFAULT_DEPTH, 'Default depth is assumed at instantiation');
     ok($lock->scope eq $Net::DAV::Lock::DEFAULT_SCOPE, 'Default scope is assumed at instantiation');
+}
+
+{
+    my $uuid = 'deadbeef-133t-cafe-babe-f00fd00dc475';
+
+    my $lock = Net::DAV::Lock->new({
+        'owner'     => 'gary',
+        'path'      => '/foo/bar',
+        'uuid'      => $uuid
+    });
+
+    ok($lock->uuid eq $uuid, 'UUID accepted at object instantiation time');
+}
+
+{
+    my $uuid = 'deadbeef-133t-cafe-babe-f00fd00dc475';
+
+    my $lock = Net::DAV::Lock->new({
+        'owner'     => 'gary',
+        'path'      => '/foo/bar',
+        'token'     => "opaquelocktoken:$uuid"
+    });
+
+    ok($lock->uuid eq $uuid, 'UUID in token URI format is allowed at instantiation time and parsed properly');
 }
 
 {
