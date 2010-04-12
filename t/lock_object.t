@@ -20,7 +20,7 @@ use Net::DAV::Lock ();
 }
 
 {
-    my $uuid = 'deadbeef-133t-cafe-babe-f00fd00dc475';
+    my $uuid = 'deadbeef-1337-cafe-babe-f00fd00dc475';
 
     my $lock = Net::DAV::Lock->new({
         'owner'     => 'gary',
@@ -32,7 +32,7 @@ use Net::DAV::Lock ();
 }
 
 {
-    my $uuid = 'deadbeef-133t-cafe-babe-f00fd00dc475';
+    my $uuid = 'deadbeef-1337-cafe-babe-f00fd00dc475';
 
     my $lock = Net::DAV::Lock->new({
         'owner'     => 'gary',
