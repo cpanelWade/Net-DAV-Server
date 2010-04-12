@@ -36,13 +36,6 @@ sub lock {
     _validate_lock_request( $req );
 
     my $path = $req->{'path'};
-    my $timeout = $req->{'timeout'} || $Net::DAV::Lock::DEFAULT_LOCK_TIMEOUT;
-
-    $timeout = $Net::DAV::Lock::MAX_LOCK_TIMEOUT if $timeout > $Net::DAV::Lock::MAX_LOCK_TIMEOUT;
-
-    my $expiry = time() + $timeout;
-    my $depth = defined $req->{'depth'}? $req->{'depth'}: $Net::DAV::Lock::DEFAULT_DEPTH;
-    my $scope = defined $req->{'scope'}? $req->{'scope'}: $Net::DAV::Lock::DEFAULT_SCOPE;
 
     return undef unless $self->can_modify( $req ) && !$self->_get_lock( $path );
     foreach my $lock ( $self->{'db'}->list_descendants( $path ) ) {
@@ -51,10 +44,10 @@ sub lock {
 
     return $self->_add_lock(Net::DAV::Lock->new({
         'path'      => $path,
-        'expiry'    => $expiry,
+        (defined $req->{'timeout'} ? ('expiry' => time() + $req->{'timeout'}) : ()),
         'owner'     => $req->{'owner'},
-        'depth'     => $depth,
-        'scope'     => $scope
+        (defined $req->{'depth'} ? ('depth' => $req->{'depth'}) : ()),
+        (defined $req->{'scope'} ? ('scope' => $req->{'scope'}) : ()),
     }));
 }
 
