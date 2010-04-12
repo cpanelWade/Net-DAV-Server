@@ -51,7 +51,14 @@ sub new {
     # Calculate and store a new UUID based on the path and owner
     # specified, if none is present.
     #
-    unless ($hash->{'uuid'}) {
+    if ($hash->{'uuid'}) {
+        $obj->{'uuid'} = $hash->{'uuid'};
+    } elsif ($hash->{'token'}) {
+        my $uuid = $hash->{'token'};
+        $uuid =~ s/^opaquelocktoken://;
+
+        $obj->{'uuid'} = $uuid;
+    } else {
         $obj->{'uuid'} = Net::DAV::UUID::generate(@{$hash}{qw/path owner/});
     }
 
