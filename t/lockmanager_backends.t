@@ -50,6 +50,7 @@ foreach my $db_driver (@db_drivers) {
     my $new_expiry = time() + 86400;
     $lock->renew($new_expiry);
     ok($db->update($lock)->expiry == $new_expiry, "$db_type\::update() is able to update/renew locks");
+    ok($db->get($path)->uuid eq $lock->uuid, "$db_type\::get() does not mangle UUIDs when reanimating Net::DAV::Lock");
 
     $db->remove($lock);
     ok(!defined $db->get($path), "$db_type\::remove() actually removes lock entry");
