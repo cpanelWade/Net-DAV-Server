@@ -85,6 +85,12 @@ sub _initialize {
     # then we can safely return.
     #
     if ($self->{'db'}->selectrow_hashref(q/select name from sqlite_master where name = 'lock'/)) {
+        #
+        # Disable transactions and raised errors to revert to default
+        # state.
+        #
+        $self->{'db'}->{'AutoCommit'} = 1;
+        $self->{'db'}->{'RaiseError'} = 0;
         return;
     }
 
