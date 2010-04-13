@@ -73,6 +73,24 @@ sub new {
     return bless $obj, $class;
 }
 
+#
+# Provide a separate constructor for reanimating values from the database,
+# especially when the validation within the normal constructor would be
+# considered undesired behavior.
+#
+# Results in a simple copy of the database row into a blessed object.
+#
+sub reanimate {
+    my ($class, $row) = @_;
+    my $obj = {};
+
+    while (my ($key, $value) = each(%$row)) {
+        $obj->{$key} = $value;
+    }
+
+    return bless $obj, $class;
+}
+
 sub expiry { shift->{'expiry'} };
 sub owner { shift->{'owner'} };
 sub depth { shift->{'depth'} };
