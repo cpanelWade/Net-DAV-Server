@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 21;
+use Test::More tests => 25;
 use Carp;
 
 use strict;
@@ -89,6 +89,8 @@ my $token_re = qr/^opaquelocktoken:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/
     my $olck = $mgr->lock({ 'path' => '/foo', 'owner' => 'bianca' });
     like( $olck->token, $token_re, 'bianca locks foo' );
     isnt( $token, $olck->token, 'Non-overlapping tokens do not match' );
+    ok( !$mgr->can_modify({ 'path' => '/foo', 'owner' => 'fred' }), 'foo is locked for fred.' );
+    ok( !$mgr->can_modify({ 'path' => '/bar', 'owner' => 'bianca' }), 'bar is locked for bianca.' );
 }
 
 # Verify nested non-infinity locks.
@@ -102,5 +104,7 @@ my $token_re = qr/^opaquelocktoken:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/
     my $flck = $mgr->lock({ 'path' => '/bar', 'owner' => 'fred' });
     like( $flck->token, $token_re, 'non-infinity: fred locks bar' );
     isnt( $token, $flck->token, 'non-infinity: Tokens do not match' );
+    ok( !$mgr->can_modify({ 'path' => '/', 'owner' => 'bianca' }), 'root is locked for bianca.' );
+    ok( !$mgr->can_modify({ 'path' => '/bar', 'owner' => 'bianca' }), 'bar is locked for bianca.' );
 }
 
