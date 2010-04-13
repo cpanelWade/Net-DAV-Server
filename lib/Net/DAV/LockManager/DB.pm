@@ -164,7 +164,7 @@ sub get {
 
     my $row = $self->{'db'}->selectrow_hashref(q/select * from lock where path = ?/, {}, $path);
 
-    return $row? Net::DAV::Lock->new($row): undef;
+    return $row? Net::DAV::Lock->reanimate($row): undef;
 }
 
 #
@@ -176,14 +176,14 @@ sub list_descendants {
 
     if ($path eq '/') {
         return map {
-            Net::DAV::Lock->new($_)
+            Net::DAV::Lock->reanimate($_)
         } @{$self->{'db'}->selectall_arrayref(q(select * from lock where path != '/'), { 'Slice' => {} })};
     }
 
     my $sql = q/select * from lock where path like ?/;
 
     return map {
-        Net::DAV::Lock->new($_)
+        Net::DAV::Lock->reanimate($_)
     } @{$self->{'db'}->selectall_arrayref($sql, { 'Slice' => {} }, "$path/%")};
 }
 
