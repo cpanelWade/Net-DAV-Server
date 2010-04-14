@@ -77,6 +77,26 @@ sub unlock {
     return 1;
 }
 
+sub list_all_locks {
+    my ($self, $req) = @_;
+
+    _validate_lock_request( $req );
+
+    my $path = $req->{'path'};
+    my @locks;
+    my $lock = $self->_get_lock( $path );
+    push @locks, $lock if defined $lock;
+
+    while ( $path =~ s{/[^/]+$}{} ) {
+        $path = '/' unless length $path;
+
+        my $lock = $self->_get_lock( $path );
+        push @locks, $lock if $lock && $lock->depth eq 'infinity';
+    }
+
+    return @locks;
+}
+
 #
 # Retrieve a lock from the lock database, given the path to the lock.
 # Return undef if none.  This method also has the side effect of expiring
