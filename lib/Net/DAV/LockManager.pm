@@ -202,7 +202,7 @@ sub _validate_lock_request {
     }
 
     die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
-    die "Not a clean path\n" if $req->{'path'} !~ m{^/} || $req->{'path'} =~ m{./$};
+    die "Not a clean path\n" if $req->{'path'} !~ m{^/};
     die "Not a valid owner name.\n" unless $req->{'owner'} =~ m{^[a-z_.][-a-z0-9_.]*$}i;  # May need better validation.
 
     # Validate optional parameters as necessary.
@@ -223,6 +223,9 @@ sub _validate_lock_request {
             die "Invalid token, not a string or array reference.\n";
         }
     }
+
+    # Remove trailing / from path to make pathnames canonical.
+    $req->{'path'} =~ s{/$}{} unless $req->{'path'} eq '/';
 
     return;
 }

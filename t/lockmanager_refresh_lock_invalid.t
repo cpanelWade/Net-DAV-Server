@@ -26,7 +26,7 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
     my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'gwj' });
-    foreach my $path ( '', qw{/.. /fred/.. /../fred /fred/../bianca /fred/ fred/ fred} ) {
+    foreach my $path ( '', qw{/.. /fred/.. /../fred /fred/../bianca /fred/./bianca fred/ fred} ) {
         did_die( sub { $mgr->refresh_lock({ 'path' => $path, 'owner'=>'gwj', 'token' => '1234' }) }, qr/Not a clean path/, "$path: Not an allowed path" );
     }
 }

@@ -24,7 +24,7 @@ use Net::DAV::LockManager::Simple ();
     # Path checking
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    foreach my $path ( '', qw{/.. /fred/.. /../fred /fred/../bianca /fred/ fred/ fred} ) {
+    foreach my $path ( '', qw{/.. /fred/.. /../fred /fred/../bianca /fred/./bianca fred/ fred} ) {
         did_die( sub { $mgr->can_modify({ 'path' => $path, 'owner'=>'gwj' }) }, qr/Not a clean path/, "$path: Not an allowed path" );
     }
 }
