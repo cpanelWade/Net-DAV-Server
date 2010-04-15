@@ -82,13 +82,10 @@ sub new {
 #
 sub reanimate {
     my ($class, $row) = @_;
-    my $obj = {};
 
-    while (my ($key, $value) = each(%$row)) {
-        $obj->{$key} = $value;
-    }
-
-    return bless $obj, $class;
+    bless {
+        map { $_ => $row->{$_} } keys %$row
+    }, $class;
 }
 
 sub expiry { shift->{'expiry'} };
