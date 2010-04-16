@@ -83,9 +83,7 @@ sub new {
 sub reanimate {
     my ($class, $row) = @_;
 
-    bless {
-        map { $_ => $row->{$_} } keys %$row
-    }, $class;
+    bless { %$row }, $class;
 }
 
 sub expiry { shift->{'expiry'} };
