@@ -46,8 +46,7 @@ specified in the hash ref. The hash ref supplies the following named parameters.
 
 =item path
 
-Required parameter specifying the path as a string. In the case of a directory,
-the path should not end with a final '/' character.
+Required parameter specifying the path as a string.
 
 =item owner
 
@@ -70,8 +69,7 @@ ref.
 
 =item path
 
-Required parameter specifying the path as a string. In the case of a directory,
-the path should not end with a final '/' character.
+Required parameter specifying the path as a string.
 
 =item owner
 
@@ -121,8 +119,7 @@ hash ref contains the following named parameters.
 
 =item path
 
-Required parameter specifying the path as a string. In the case of a directory,
-the path should not end with a final '/' character.
+Required parameter specifying the path as a string.
 
 =item owner
 
@@ -157,8 +154,7 @@ parameters in the hash are
 
 =item path
 
-Required parameter specifying the path as a string. In the case of a directory,
-the path should not end with a final '/' character.
+Required parameter specifying the path as a string.
 
 =item owner
 
@@ -174,6 +170,36 @@ containing token strings.
 =back
 
 Returns true on success, false otherwise.
+
+=head2 find_lock( $hash_ref )
+
+Find the lock that pretects the resource listed in $hash_ref. Returns the
+C<Net::DAV::Lock> object representing the lock, or C<undef> if none is found.
+
+The hash reference contains the path to the resource that we want to check.
+
+=over 4
+
+=item path
+
+Required parameter specifying the path as a string.
+
+=back
+
+=head2 list_all_locks( $hash_ref )
+
+List all the locks that pretect the resource listed in $hash_ref. Returns an
+array of C<Net::DAV::Lock> objects representing the locks.
+
+The hash reference contains the path to the resource that we want to check.
+
+=over 4
+
+=item path
+
+Required parameter specifying the path as a string.
+
+=back
 
 =head1 DIAGNOSTICS
 

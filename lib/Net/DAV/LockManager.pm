@@ -19,7 +19,7 @@ sub new {
 sub can_modify {
     my ($self, $req) = @_;
 
-    _validate_lock_request( $req );
+    _validate_lock_request( $req, 'owner' );
 
     my ($resource, $token) = @{$req}{qw/path token/};
     my $lock = $self->_get_lock( $resource ) || $self->_get_indirect_lock( $resource );
@@ -33,7 +33,7 @@ sub can_modify {
 sub lock {
     my ($self, $req) = @_;
 
-    _validate_lock_request( $req );
+    _validate_lock_request( $req, 'owner' );
 
     my $path = $req->{'path'};
 
@@ -53,7 +53,7 @@ sub lock {
 
 sub refresh_lock {
     my ($self, $req) = @_;
-    _validate_lock_request( $req, 'token' );
+    _validate_lock_request( $req, 'owner', 'token' );
 
     my $lock = $self->_get_lock( $req->{'path'} );
     return undef unless $lock;
@@ -66,7 +66,7 @@ sub refresh_lock {
 
 sub unlock {
     my ($self, $req) = @_;
-    _validate_lock_request( $req, 'token' );
+    _validate_lock_request( $req, 'owner', 'token' );
 
     my $lock = $self->_get_lock( $req->{'path'} );
     return 0 unless $lock;
@@ -75,6 +75,16 @@ sub unlock {
     $self->_remove_lock( $lock );
 
     return 1;
+}
+
+sub find_lock {
+    my ($self, $req) = @_;
+
+    _validate_lock_request( $req );
+
+    my $path = $req->{'path'};
+
+    return $self->_get_lock( $path ) || $self->_get_indirect_lock( $path );
 }
 
 sub list_all_locks {
@@ -197,13 +207,15 @@ sub _validate_lock_request {
     my ($req, @required) = @_;
     die "Parameter should be a hash reference.\n" unless 'HASH' eq ref $req;
 
-    foreach my $arg ( qw/path owner/, @required ) {
+    foreach my $arg ( qw/path/, @required ) {
         die "Missing required '$arg' parameter.\n" unless exists $req->{$arg};
     }
 
     die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
     die "Not a clean path\n" if $req->{'path'} !~ m{^/};
-    die "Not a valid owner name.\n" unless $req->{'owner'} =~ m{^[a-z_.][-a-z0-9_.]*$}i;  # May need better validation.
+    if( defined $req->{'owner'} && $req->{'owner'} !~ m{^[a-z_.][-a-z0-9_.]*$}i ) {
+        die "Not a valid owner name.\n";  # May need better validation.
+    }
 
     # Validate optional parameters as necessary.
     if( defined $req->{'scope'} && $Net::DAV::Lock::DEFAULT_SCOPE ne $req->{'scope'} ) {
