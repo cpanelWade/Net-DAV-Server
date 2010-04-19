@@ -16,8 +16,10 @@ sub new {
     die('Missing path value') unless defined $hash->{'path'};
     $obj->{'path'} = $hash->{'path'};
 
+    die('Missing creator value') unless defined $hash->{'creator'};
+    die('Owner contains invalid characters') unless $hash->{'creator'} =~ /^[a-z_.][-a-z0-9_.]*$/;
+    $obj->{'creator'} = $hash->{'creator'};
     die('Missing owner value') unless defined $hash->{'owner'};
-    die('Owner contains invalid characters') unless $hash->{'owner'} =~ /^[a-z_.][-a-z0-9_.]*$/;
     $obj->{'owner'} = $hash->{'owner'};
 
     if (defined $hash->{'expiry'}) {
@@ -87,6 +89,7 @@ sub reanimate {
 }
 
 sub expiry { shift->{'expiry'} };
+sub creator { shift->{'creator'} };
 sub owner { shift->{'owner'} };
 sub depth { shift->{'depth'} };
 sub scope { shift->{'scope'} };

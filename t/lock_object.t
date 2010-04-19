@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-use Test::More tests => 19;
+use Test::More tests => 20;
 use Carp;
 
 use strict;
@@ -10,7 +10,8 @@ use Net::DAV::Lock ();
 
 {
     my $lock = Net::DAV::Lock->new({
-        'owner'     => 'gary',
+        'creator'   => 'gary',
+        'owner'     => 'Gary Human',
         'path'      => '/foo/bar'
     });
 
@@ -22,8 +23,9 @@ use Net::DAV::Lock ();
 {
     eval {
         Net::DAV::Lock->new({
-            'owner' => 'f00$bar*!#',
-            'path'  => '/foo/bar'
+            'creator' => 'f00$bar*!#',
+            'owner'   => 'The Foo Bar company',
+            'path'    => '/foo/bar'
         });
     };
 
@@ -34,7 +36,8 @@ use Net::DAV::Lock ();
     my $uuid = 'deadbeef-1337-cafe-babe-f00fd00dc475';
 
     my $lock = Net::DAV::Lock->new({
-        'owner'     => 'gary',
+        'creator'   => 'gary',
+        'owner'     => 'Gary Human',
         'path'      => '/foo/bar',
         'uuid'      => $uuid
     });
@@ -46,7 +49,8 @@ use Net::DAV::Lock ();
     my $uuid = 'deadbeef-1337-cafe-babe-f00fd00dc475';
 
     my $lock = Net::DAV::Lock->new({
-        'owner'     => 'gary',
+        'creator'   => 'gary',
+        'owner'     => 'Gary Human',
         'path'      => '/foo/bar',
         'token'     => "opaquelocktoken:$uuid"
     });
@@ -59,7 +63,8 @@ use Net::DAV::Lock ();
 
     eval {
         Net::DAV::Lock->new({
-            'owner'     => 'gary',
+            'creator'   => 'gary',
+            'owner'     => 'Gary Human',
             'path'      => '/foo/bar',
             'token'     => "poop:$uuid"
         });
@@ -73,7 +78,8 @@ use Net::DAV::Lock ();
 
     eval {
         Net::DAV::Lock->new({
-            'owner'     => 'gary',
+            'creator'   => 'gary',
+            'owner'     => 'Gary Human',
             'path'      => '/foo/bar',
             'token'     => "opaquelocktoken:$uuid"
         });
@@ -87,9 +93,10 @@ use Net::DAV::Lock ();
 
     eval {
         Net::DAV::Lock->new({
-            'owner' => 'gary',
-            'path'  => '/foo/bar',
-            'uuid'  => "$uuid"
+            'creator' => 'gary',
+            'owner'   => 'Gary Human',
+            'path'    => '/foo/bar',
+            'uuid'    => "$uuid"
         });
     };
 
@@ -98,7 +105,8 @@ use Net::DAV::Lock ();
 
 {
     my $lock = Net::DAV::Lock->new({
-        'owner'     => 'gary',
+        'creator'   => 'gary',
+        'owner'     => 'Gary Human',
         'path'      => '/foo/bar',
         'timeout'   => 300
     });
@@ -110,7 +118,8 @@ use Net::DAV::Lock ();
     eval {
         Net::DAV::Lock->new({
             'path'      => '/foo/bar',
-            'owner'     => 'cecil',
+            'creator'   => 'cecil',
+            'owner'     => 'Cecil the Seasick Sea Serpent',
             'expiry'    => time() + $Net::DAV::Lock::MAX_LOCK_TIMEOUT + 1
         });
     };
@@ -122,7 +131,8 @@ use Net::DAV::Lock ();
     eval {
         Net::DAV::Lock->new({
             'path'      => '/foo/bar',
-            'owner'     => 'cecil',
+            'creator'   => 'cecil',
+            'owner'     => 'Cecil the Seasick Sea Serpent',
             'timeout'   => $Net::DAV::Lock::MAX_LOCK_TIMEOUT + 1
         });
     };
@@ -133,6 +143,18 @@ use Net::DAV::Lock ();
 {
     eval {
         Net::DAV::Lock->new({
+            'owner'     => 'Unknown owner',
+            'path'      => '/foo/bar'
+        });
+    };
+
+    ok($@ ne '', 'Warning is thrown when no creator is specified');
+}
+
+{
+    eval {
+        Net::DAV::Lock->new({
+            'creator'   => 'gary',
             'path'      => '/foo/bar'
         });
     };
@@ -144,18 +166,20 @@ use Net::DAV::Lock ();
     eval {
         Net::DAV::Lock->new({
             'expiry'    => time() + 120,
-            'owner'     => 'invalid-owner-name#$'
+            'creator'   => 'invalid-creator-name#$',
+            'owner'     => 'Invalid creator'
         });
     };
 
-    ok($@ ne '', "Warning was thrown at object creation time for invalid owner");
+    ok($@ ne '', "Warning was thrown at object creation time for invalid creator");
 }
 
 {
     eval {
         Net::DAV::Lock->new({
             'expiry'    => time() + 120,
-            'owner'     => 'klaude'
+            'creator'   => 'klaude',
+            'owner'     => 'Klaude'
         });
     };
 
@@ -166,7 +190,8 @@ use Net::DAV::Lock ();
     eval {
         Net::DAV::Lock->new({
             'path'      => '/foo',
-            'owner'     => 'kevin',
+            'creator'   => 'kevin',
+            'owner'     => 'Kevin',
             'depth'     => 5
         });
     };
@@ -178,7 +203,8 @@ use Net::DAV::Lock ();
     eval {
         Net::DAV::Lock->new({
             'path'      => '/foo',
-            'owner'     => 'kevin',
+            'creator'   => 'kevin',
+            'owner'     => 'Kevin',
             'scope'     => 'poop'
         });
     };
@@ -194,7 +220,8 @@ use Net::DAV::Lock ();
     eval {
         Net::DAV::Lock->new({
             'expiry'    => 100,
-            'owner'     => 'klaude',
+            'creator'   => 'klaude',
+            'owner'     => 'Klaude',
             'depth'     => 'infinity',
             'scope'     => 'exclusive',
             'path'      => '/foo'
@@ -207,7 +234,8 @@ use Net::DAV::Lock ();
 {
     my $lock = Net::DAV::Lock->new({
         'expiry'    => time() + 120,
-        'owner'     => 'klaude',
+        'creator'   => 'klaude',
+        'owner'     => 'Klaude',
         'depth'     => 'infinity',
         'scope'     => 'exclusive',
         'path'      => '/foo'
