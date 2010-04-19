@@ -38,7 +38,8 @@ foreach my $db_driver (@db_drivers) {
 
     my $lock = $db->add(Net::DAV::Lock->new({
         'expiry'    => time() + 720,
-        'owner'     => 'alice',
+        'creator'   => 'alice',
+        'owner'     => 'Alice',
         'depth'     => 'infinity',
         'scope'     => 'exclusive',
         'path'      => $path
@@ -67,7 +68,8 @@ foreach my $db_driver (@db_drivers) {
     foreach my $path (qw(/ /foo /foo/bar /foo/bar/baz /foo/meow)) {
         $db->add(Net::DAV::Lock->new({
             'expiry'    => time() + 720,
-            'owner'     => 'alice',
+            'creator'   => 'alice',
+            'owner'     => 'Alice',
             'depth'     => 'infinity',
             'scope'     => 'exclusive',
             'path'      => $path

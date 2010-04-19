@@ -17,6 +17,7 @@ my @schema = (
         create table lock (
             uuid CHAR(36) PRIMARY KEY,
             expiry INTEGER,
+            creator CHAR(128),
             owner CHAR(128),
             depth CHAR(32),
             scope CHAR(32),
@@ -212,15 +213,16 @@ sub add {
 
     my $sql = qq{
         insert into lock (
-            uuid, expiry, owner, depth, scope, path
+            uuid, expiry, creator, owner, depth, scope, path
         ) values (
-            ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?
         )
     };
 
     $self->{'db'}->do($sql, {},
         $lock->uuid,
         $lock->expiry,
+        $lock->creator,
         $lock->owner,
         $lock->depth,
         $lock->scope,

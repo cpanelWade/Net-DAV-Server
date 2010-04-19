@@ -19,7 +19,7 @@ sub new {
 sub can_modify {
     my ($self, $req) = @_;
 
-    _validate_lock_request( $req, 'owner' );
+    _validate_lock_request( $req, 'user' );
 
     my ($resource, $token) = @{$req}{qw/path token/};
     my $lock = $self->_get_lock( $resource ) || $self->_get_indirect_lock( $resource );
@@ -33,7 +33,7 @@ sub can_modify {
 sub lock {
     my ($self, $req) = @_;
 
-    _validate_lock_request( $req, 'owner' );
+    _validate_lock_request( $req, 'user', 'owner' );
 
     my $path = $req->{'path'};
 
@@ -45,6 +45,7 @@ sub lock {
     return $self->_add_lock(Net::DAV::Lock->new({
         'path'      => $path,
         (defined $req->{'timeout'} ? ('expiry' => time() + $req->{'timeout'}) : ()),
+        'creator'   => $req->{'user'},
         'owner'     => $req->{'owner'},
         (defined $req->{'depth'} ? ('depth' => $req->{'depth'}) : ()),
         (defined $req->{'scope'} ? ('scope' => $req->{'scope'}) : ()),
@@ -53,7 +54,7 @@ sub lock {
 
 sub refresh_lock {
     my ($self, $req) = @_;
-    _validate_lock_request( $req, 'owner', 'token' );
+    _validate_lock_request( $req, 'user', 'token' );
 
     my $lock = $self->_get_lock( $req->{'path'} );
     return undef unless $lock;
@@ -66,7 +67,7 @@ sub refresh_lock {
 
 sub unlock {
     my ($self, $req) = @_;
-    _validate_lock_request( $req, 'owner', 'token' );
+    _validate_lock_request( $req, 'user', 'token' );
 
     my $lock = $self->_get_lock( $req->{'path'} );
     return 0 unless $lock;
@@ -177,12 +178,12 @@ sub _get_indirect_lock {
 #
 # Return true or false depending on whether or not the information reflected
 # in the request is appropriate for the lock obtained from the database.  In
-# other words, make sure the token and owner match the request.
+# other words, make sure the token and user match the request.
 #
 sub _is_permitted {
     my ($req, $lock) = @_;
 
-    return 0 unless $req->{'owner'} eq $lock->owner;
+    return 0 unless $req->{'user'} eq $lock->creator;
     return 0 if !defined $req->{'token'};
     if ( 'ARRAY' eq ref $req->{'token'} ) {
         return 0 unless grep { $_ eq $lock->token } @{$req->{'token'}};
@@ -199,7 +200,7 @@ sub _is_permitted {
 #
 # The parameter passed in should be a hash reference to be validated.  The
 # optional list that follows are names of required parameters besides the
-# 'path' and 'owner' parameters that are always required.
+# 'path' and 'user' parameters that are always required.
 #
 # Throws exception on failure.
 #
@@ -213,8 +214,8 @@ sub _validate_lock_request {
 
     die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
     die "Not a clean path\n" if $req->{'path'} !~ m{^/};
-    if( defined $req->{'owner'} && $req->{'owner'} !~ m{^[a-z_.][-a-z0-9_.]*$}i ) {
-        die "Not a valid owner name.\n";  # May need better validation.
+    if( defined $req->{'user'} && $req->{'user'} !~ m{^[a-z_.][-a-z0-9_.]*$}i ) {
+        die "Not a valid user name.\n";  # May need better validation.
     }
 
     # Validate optional parameters as necessary.

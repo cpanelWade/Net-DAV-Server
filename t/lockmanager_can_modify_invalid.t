@@ -16,8 +16,8 @@ use Net::DAV::LockManager::Simple ();
     did_die( sub { $mgr->can_modify() },                          qr/hash reference/,           'No args' );
     did_die( sub { $mgr->can_modify( 'fred' ) },                  qr/hash reference/,           'String arg' );
     did_die( sub { $mgr->can_modify({}) },                        qr/Missing required/,         'No params' );
-    did_die( sub { $mgr->can_modify({ 'owner' => 'gwj' }) },      qr/Missing required 'path'/,  'Missing path' );
-    did_die( sub { $mgr->can_modify({ 'path' => '/tmp/file' }) }, qr/Missing required 'owner'/, 'Missing owner' );
+    did_die( sub { $mgr->can_modify({ 'user' => 'gwj' }) },      qr/Missing required 'path'/,  'Missing path' );
+    did_die( sub { $mgr->can_modify({ 'path' => '/tmp/file' }) }, qr/Missing required 'user'/, 'Missing user' );
 }
 
 {
@@ -25,7 +25,7 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
     foreach my $path ( '', qw{/.. /fred/.. /../fred /fred/../bianca /fred/./bianca fred/ fred} ) {
-        did_die( sub { $mgr->can_modify({ 'path' => $path, 'owner'=>'gwj' }) }, qr/Not a clean path/, "$path: Not an allowed path" );
+        did_die( sub { $mgr->can_modify({ 'path' => $path, 'user'=>'gwj' }) }, qr/Not a clean path/, "$path: Not an allowed path" );
     }
 }
 
@@ -33,8 +33,8 @@ use Net::DAV::LockManager::Simple ();
     # Owner checking
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    foreach my $owner ( '', qw{aa()bb /fred/ ab+cd 1fred} ) {
-        did_die( sub { $mgr->can_modify({ 'path' => '/fred/foo', 'owner'=>$owner }) }, qr/Not a valid owner/, "$owner Not an allowed owner" );
+    foreach my $user ( '', qw{aa()bb /fred/ ab+cd 1fred} ) {
+        did_die( sub { $mgr->can_modify({ 'path' => '/fred/foo', 'user'=>$user }) }, qr/Not a valid user/, "$user Not an allowed user" );
     }
 }
 
@@ -42,7 +42,7 @@ use Net::DAV::LockManager::Simple ();
     # Owner checking
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    did_die( sub { $mgr->can_modify({ 'path' => '/fred/foo', 'owner'=>'fred', 'token' => {} }) }, qr/Invalid token/, "Hash ref not a valid token" );
+    did_die( sub { $mgr->can_modify({ 'path' => '/fred/foo', 'user'=>'fred', 'token' => {} }) }, qr/Invalid token/, "Hash ref not a valid token" );
 }
 
 
