@@ -17,66 +17,66 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $mock_token }),
+    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $mock_token }),
         'Can not unlock a non-existent lock' );
 }
 
 {
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'bianca' });
+    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'user' => 'bianca', 'owner' => 'Bianca' });
 
-    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $lck->token }),
+    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $lck->token }),
         'Can not unlock non-owned lock' );
 }
 
 {
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    my $lck = $mgr->lock({ 'path' => '/tmp', 'owner' => 'fred' });
+    my $lck = $mgr->lock({ 'path' => '/tmp', 'user' => 'fred', 'owner' => 'Fred' });
 
-    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $lck->token }),
+    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $lck->token }),
         'Can not unlock ancestor lock' );
 }
 
 {
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    my $lck = $mgr->lock({ 'path' => '/tmp/file1', 'owner' => 'fred' });
+    my $lck = $mgr->lock({ 'path' => '/tmp/file1', 'user' => 'fred', 'owner' => 'Fred' });
 
-    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $lck->token }),
+    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $lck->token }),
         'Can not unlock sibling lock' );
 }
 
 {
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
+    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'user' => 'fred', 'owner' => 'Fred' });
 
-    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $mock_token }),
+    ok( !$mgr->unlock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $mock_token }),
         'Can not unlock with wrong token' );
 }
 
 {
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
-    ok( !$mgr->can_modify({ 'path' => '/tmp/file', 'owner' => 'bianca' }), 'Can not modify locked resource.' );
+    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'user' => 'fred', 'owner' => 'Fred' });
+    ok( !$mgr->can_modify({ 'path' => '/tmp/file', 'user' => 'bianca' }), 'Can not modify locked resource.' );
 
-    ok( $mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $lck->token }),
+    ok( $mgr->unlock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $lck->token }),
         'Successfully unlocked resource' );
-    ok( $mgr->can_modify({ 'path' => '/tmp/file', 'owner' => 'bianca' }), 'Can modify unlocked resource.' );
+    ok( $mgr->can_modify({ 'path' => '/tmp/file', 'user' => 'bianca' }), 'Can modify unlocked resource.' );
 }
 
 {
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new( $db );
-    my $lck1 = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
-    my $lck2 = $mgr->lock({ 'path' => '/tmp/subdir', 'owner' => 'fred' });
-    my $lck3 = $mgr->lock({ 'path' => '/tmp/junk', 'owner' => 'fred' });
+    my $lck1 = $mgr->lock({ 'path' => '/tmp/file', 'user' => 'fred', 'owner' => 'Fred' });
+    my $lck2 = $mgr->lock({ 'path' => '/tmp/subdir', 'user' => 'fred', 'owner' => 'Fred' });
+    my $lck3 = $mgr->lock({ 'path' => '/tmp/junk', 'user' => 'fred', 'owner' => 'Fred' });
 
-    ok( $mgr->unlock({ 'path' => '/tmp/subdir', 'owner' => 'fred', 'token' => $lck2->token }), 'remove middle lock' );
-    ok( !$mgr->can_modify({ 'path' => '/tmp/file', 'owner' => 'bianca' }), 'Can not modify first locked resource.' );
-    ok( !$mgr->can_modify({ 'path' => '/tmp/junk', 'owner' => 'bianca' }), 'Can not modify last locked resource.' );
+    ok( $mgr->unlock({ 'path' => '/tmp/subdir', 'user' => 'fred', 'token' => $lck2->token }), 'remove middle lock' );
+    ok( !$mgr->can_modify({ 'path' => '/tmp/file', 'user' => 'bianca' }), 'Can not modify first locked resource.' );
+    ok( !$mgr->can_modify({ 'path' => '/tmp/junk', 'user' => 'bianca' }), 'Can not modify last locked resource.' );
 }
 

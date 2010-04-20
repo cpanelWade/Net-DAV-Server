@@ -17,7 +17,7 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( !defined $mgr->refresh_lock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $mock_token }),
+    ok( !defined $mgr->refresh_lock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $mock_token }),
         'Can not refresh a non-existent lock' );
 }
 
@@ -25,22 +25,22 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 {
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
+    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'user' => 'fred', 'owner' => 'Fred' });
 
-    ok( !defined $mgr->refresh_lock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $mock_token }),
+    ok( !defined $mgr->refresh_lock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $mock_token }),
         'Can not refresh with bad token' );
 
-    ok( !defined $mgr->refresh_lock({ 'path' => '/tmp/file', 'owner' => 'bianca', 'token' => $lck->token }),
+    ok( !defined $mgr->refresh_lock({ 'path' => '/tmp/file', 'user' => 'bianca', 'token' => $lck->token }),
         'Can not refresh with wrong owner' );
 }
 
 {
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
+    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'user' => 'fred', 'owner' => 'Fred' });
     my $token = $lck->token;
 
-    my $lck2 = $mgr->refresh_lock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $token, 'timeout' => 10 });
+    my $lck2 = $mgr->refresh_lock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $token, 'timeout' => 10 });
     ok( defined $lck2, 'refresh_lock succeeded with correct parms' );
     is( $lck2->token, $token, 'Refreshed lock has same token' );
     ok( $lck2->expiry-time <= 10, 'Refreshed lock has new timeout' );
@@ -49,10 +49,10 @@ my $mock_token = 'opaquelocktoken:' . Net::DAV::UUID::generate( '/tmp/file', 'fr
 {
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'owner' => 'fred' });
+    my $lck = $mgr->lock({ 'path' => '/tmp/file', 'user' => 'fred', 'owner' => 'Fred' });
     my $token = $lck->token;
 
-    my $lck2 = $mgr->refresh_lock({ 'path' => '/tmp/file', 'owner' => 'fred', 'token' => $token });
+    my $lck2 = $mgr->refresh_lock({ 'path' => '/tmp/file', 'user' => 'fred', 'token' => $token });
     ok( defined $lck2, 'refresh_lock succeeded with default timeout' );
     is( $lck2->token, $token, 'Refreshed lock has same token' );
     my $timeout = $lck2->expiry - time;
