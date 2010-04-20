@@ -16,9 +16,9 @@ use Net::DAV::LockManager::Simple ();
     did_die( sub { $mgr->unlock() },                          qr/hash reference/,           'No args' );
     did_die( sub { $mgr->unlock( 'fred' ) },                  qr/hash reference/,           'String arg' );
     did_die( sub { $mgr->unlock({}) },                        qr/Missing required/,         'No params' );
-    did_die( sub { $mgr->unlock({ 'owner' => 'gwj', 'token' => '1234' }) },      qr/Missing required 'path'/,  'Missing path' );
-    did_die( sub { $mgr->unlock({ 'path' => '/tmp/file', 'token' => '1234' }) }, qr/Missing required 'owner'/, 'Missing owner' );
-    did_die( sub { $mgr->unlock({ 'path' => '/tmp/file', 'owner' => 'gwj' }) }, qr/Missing required 'token'/, 'Missing token' );
+    did_die( sub { $mgr->unlock({ 'user' => 'gwj', 'token' => '1234' }) },      qr/Missing required 'path'/,  'Missing path' );
+    did_die( sub { $mgr->unlock({ 'path' => '/tmp/file', 'token' => '1234' }) }, qr/Missing required 'user'/, 'Missing user' );
+    did_die( sub { $mgr->unlock({ 'path' => '/tmp/file', 'user' => 'gwj' }) }, qr/Missing required 'token'/, 'Missing token' );
 }
 
 {
@@ -26,7 +26,7 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
     foreach my $path ( '', qw{/.. /fred/.. /../fred /fred/../bianca /fred/./bianca fred/ fred} ) {
-        did_die( sub { $mgr->unlock({ 'path' => $path, 'owner'=>'gwj', 'token' => '1234' }) }, qr/Not a clean path/, "$path: Not an allowed path" );
+        did_die( sub { $mgr->unlock({ 'path' => $path, 'user'=>'gwj', 'token' => '1234' }) }, qr/Not a clean path/, "$path: Not an allowed path" );
     }
 }
 
@@ -34,8 +34,8 @@ use Net::DAV::LockManager::Simple ();
     # Owner checking
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    foreach my $owner ( '', qw{aa()bb /fred/ ab+cd 1fred} ) {
-        did_die( sub { $mgr->unlock({ 'path' => '/fred/foo', 'owner'=>$owner, 'token' => '1234' }) }, qr/Not a valid owner/, "$owner Not an allowed owner" );
+    foreach my $user ( '', qw{aa()bb /fred/ ab+cd 1fred} ) {
+        did_die( sub { $mgr->unlock({ 'path' => '/fred/foo', 'user'=>$user, 'token' => '1234' }) }, qr/Not a valid user/, "$user Not an allowed user" );
     }
 }
 
