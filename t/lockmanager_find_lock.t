@@ -21,7 +21,7 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( my $lock = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' }), "$label: Locked resource" );
+    ok( my $lock = $mgr->lock({ 'path' => '/foo', 'user' => 'fred', 'owner' => 'Fred' }), "$label: Locked resource" );
     is_deeply( $mgr->find_lock({ 'path' => '/foo' }), $lock, "$label: Direct lock returned" );
 }
 
@@ -30,7 +30,7 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( my $lock = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' }), "$label: Locked resource" );
+    ok( my $lock = $mgr->lock({ 'path' => '/foo', 'user' => 'fred', 'owner' => 'Fred' }), "$label: Locked resource" );
     is_deeply( $mgr->find_lock({ 'path' => '/foo/bar/baz' }), $lock, "$label: Indirect lock returned" );
 }
 
@@ -39,8 +39,8 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' }), "$label: Locked resource 1" );
-    ok( my $lock = $mgr->lock({ 'path' => '/foo/bar/baz', 'owner' => 'fred', 'token' => $lock_i->token }), "$label: Locked resource 2" );
+    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'user' => 'fred', 'owner' => 'Fred' }), "$label: Locked resource 1" );
+    ok( my $lock = $mgr->lock({ 'path' => '/foo/bar/baz', 'user' => 'fred', 'owner' => 'Fred', 'token' => $lock_i->token }), "$label: Locked resource 2" );
     is_deeply( $mgr->find_lock({ 'path' => '/foo/bar/baz' }), $lock, "$label: Both locks returned" );
 }
 
@@ -49,6 +49,6 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred', 'depth' => 0 }), "$label: Locked resource 1" );
+    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'user' => 'fred', 'owner' => 'Fred', 'depth' => 0 }), "$label: Locked resource 1" );
     ok( !defined $mgr->find_lock({ 'path' => '/foo/bar/baz' }), "$label: Depth 0 locks not returned." );
 }

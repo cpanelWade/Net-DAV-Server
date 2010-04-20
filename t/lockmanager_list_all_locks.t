@@ -22,7 +22,7 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( my $lock = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' }), "$label: Locked resource" );
+    ok( my $lock = $mgr->lock({ 'path' => '/foo', 'user' => 'fred', 'owner' => 'Fred' }), "$label: Locked resource" );
     my @locks = $mgr->list_all_locks({ 'path' => '/foo' });
     is_deeply( \@locks, [ $lock ], "$label: Direct lock returned" );
 }
@@ -32,7 +32,7 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( my $lock = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' }), "$label: Locked resource" );
+    ok( my $lock = $mgr->lock({ 'path' => '/foo', 'user' => 'fred', 'owner' => 'Fred' }), "$label: Locked resource" );
     my @locks = $mgr->list_all_locks({ 'path' => '/foo/bar/baz' });
     is_deeply( \@locks, [ $lock ], "$label: Indirect lock returned" );
 }
@@ -42,8 +42,8 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' }), "$label: Locked resource 1" );
-    ok( my $lock = $mgr->lock({ 'path' => '/foo/bar/baz', 'owner' => 'fred', 'token' => $lock_i->token }), "$label: Locked resource 2" );
+    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'user' => 'fred', 'owner' => 'Fred' }), "$label: Locked resource 1" );
+    ok( my $lock = $mgr->lock({ 'path' => '/foo/bar/baz', 'user' => 'fred', 'owner' => 'Fred', 'token' => $lock_i->token }), "$label: Locked resource 2" );
     my @locks = $mgr->list_all_locks({ 'path' => '/foo/bar/baz' });
     is_deeply( \@locks, [ $lock, $lock_i ], "$label: Both locks returned" );
 }
@@ -53,8 +53,8 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred', 'depth' => 0 }), "$label: Locked resource 1" );
-    ok( my $lock = $mgr->lock({ 'path' => '/foo/bar/baz', 'owner' => 'fred' }), "$label: Locked resource" );
+    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'user' => 'fred', 'owner' => 'Fred', 'depth' => 0 }), "$label: Locked resource 1" );
+    ok( my $lock = $mgr->lock({ 'path' => '/foo/bar/baz', 'user' => 'fred', 'owner' => 'Fred' }), "$label: Locked resource" );
     my @locks = $mgr->list_all_locks({ 'path' => '/foo/bar/baz' });
     is_deeply( \@locks, [ $lock ], "$label: Depth 0 locks not returned." );
 }
@@ -64,9 +64,9 @@ use Net::DAV::LockManager::Simple ();
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
 
-    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'owner' => 'fred' }), "$label: Locked resource 1" );
-    ok( my $lock_i2 = $mgr->lock({ 'path' => '/foo/bar', 'owner' => 'fred', 'token' => $lock_i->token }), "$label: Locked resource 2" );
-    ok( my $lock = $mgr->lock({ 'path' => '/foo/bar/baz', 'owner' => 'fred', 'token' => [ $lock_i->token, $lock_i2->token ] }), "$label: Locked resource 3" );
+    ok( my $lock_i = $mgr->lock({ 'path' => '/foo', 'user' => 'fred', 'owner' => 'Fred' }), "$label: Locked resource 1" );
+    ok( my $lock_i2 = $mgr->lock({ 'path' => '/foo/bar', 'user' => 'fred', 'owner' => 'Fred', 'token' => $lock_i->token }), "$label: Locked resource 2" );
+    ok( my $lock = $mgr->lock({ 'path' => '/foo/bar/baz', 'user' => 'fred', 'owner' => 'Fred', 'token' => [ $lock_i->token, $lock_i2->token ] }), "$label: Locked resource 3" );
     my @locks = $mgr->list_all_locks({ 'path' => '/foo/bar/baz' });
     is_deeply( \@locks, [ $lock, $lock_i2, $lock_i ], "$label: Depth 0 locks not returned." );
 }
