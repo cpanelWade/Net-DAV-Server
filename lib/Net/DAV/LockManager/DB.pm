@@ -106,8 +106,10 @@ sub _initialize {
 
             my $def = join(', ', map { "$_  $columns->{$_}" } keys %$columns);
 
-            $self->{'db'}->do("drop table $table") if $drop;
-            $self->{'db'}->do("create table $table ($def)") if $recreate;
+            if ($recreate) {
+                $self->{'db'}->do("drop table $table") if $drop;
+                $self->{'db'}->do("create table $table ($def)");
+            }
 
             $dirty |= $recreate;
         }
