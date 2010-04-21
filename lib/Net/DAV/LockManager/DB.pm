@@ -12,16 +12,18 @@ use Net::DAV::Lock;
 # schema definition must be executed separately due to limitations in
 # the SQLite database driver.
 #
-my %schema = (
-    'lock' => {
-        'uuid' => 'CHAR(36) PRIMARY KEY',
-        'expiry' => 'INTEGER',
-        'creator' => 'CHAR(128)',
-        'owner' => 'CHAR(128)',
-        'depth' => 'CHAR(32)',
-        'scope' => 'CHAR(32)',
-        'path' => 'CHAR(512)'
-    }
+my @schema = (
+    qq/
+        create table lock (
+            uuid CHAR(36) PRIMARY KEY,
+            expiry INTEGER,
+            creator CHAR(128),
+            owner CHAR(128),
+            depth CHAR(32),
+            scope CHAR(32),
+            path CHAR(512)
+        )
+    /
 );
 
 #
@@ -69,50 +71,39 @@ sub _initialize {
     my ($self) = @_;
 
     #
-    # Enable transactions for the duration of this method.
+    # Enable transactions for the duration of this method.  Enable
+    # error reporting.
     #
     $self->{'db'}->{'AutoCommit'} = 0;
     $self->{'db'}->{'RaiseError'} = 1;
 
     #
-    # Perform database schema initialization upon certain tables in the
-    # following conditions:
+    # Only perform initialization if the table definition is missing.
+    # We can use the internal SQLite table SQLITE_MASTER to verify
+    # the presence of our lock table.
     #
-    # 1. The table is missing.
-    # 2. The table exists, but the column definitions do not match the
-    #    schema definitions for this module.
+    # If the schema has already been applied to the current database,
+    # then we can safely return.
     #
-    my $dirty = 0;
+    if ($self->{'db'}->selectrow_hashref(q/select name from sqlite_master where name = 'lock'/)) {
+        #
+        # Disable transactions and raised errors to revert to default
+        # state.
+        #
+        $self->{'db'}->{'AutoCommit'} = 1;
+        $self->{'db'}->{'RaiseError'} = 0;
+        return;
+    }
 
+    #
+    # The schema has not been applied.  Instantiate it.
+    #
     eval {
-        while (my ($table, $columns) = each(%schema)) {
-            my ($recreate, $drop) = (1, 1);
-
-            if (defined $self->{'db'}->selectrow_hashref(q/select * from sqlite_master where name = ?/, {}, $table)) {
-                my $row = $self->{'db'}->selectrow_hashref("select * from $table");
-
-                #
-                # The table exists and the keys match the definition, so there is no
-                # need to recreate.
-                #
-                $recreate = 0 unless [sort keys %$row] ~~ [sort keys %$columns];
-            } else {
-                #
-                # The current table does not exist, therefore there is no need to
-                # drop it.
-                #
-                $drop = 0;
-            }
-
-            my $def = join(', ', map { "$_  $columns->{$_}" } keys %$columns);
-
-            if ($recreate) {
-                $self->{'db'}->do("drop table $table") if $drop;
-                $self->{'db'}->do("create table $table ($def)");
-            }
-
-            $dirty |= $recreate;
+        foreach my $definition (@schema) {
+            $self->{'db'}->do($definition);
         }
+
+        $self->{'db'}->commit();
     };
 
     #
@@ -128,12 +119,8 @@ sub _initialize {
     }
 
     #
-    # Commit the schema if any changes were required.
-    #
-    $self->{'db'}->commit() if $dirty;
-
-    #
-    # Disable transactions and raised errors to revert to default state.
+    # Disable transactions and raised errors to revert to default
+    # state.
     #
     $self->{'db'}->{'AutoCommit'} = 1;
     $self->{'db'}->{'RaiseError'} = 0;
