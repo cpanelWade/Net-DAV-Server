@@ -109,7 +109,7 @@ sub _initialize {
             $self->{'db'}->do("drop table $table") if $drop;
             $self->{'db'}->do("create table $table ($def)") if $recreate;
 
-            $dirty = $drop || $recreate;
+            $dirty = $recreate;
         }
     };
 
