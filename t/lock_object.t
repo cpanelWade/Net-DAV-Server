@@ -115,29 +115,26 @@ use Net::DAV::Lock ();
 }
 
 {
-    eval {
-        Net::DAV::Lock->new({
+    my $now = time;
+    my $lock = Net::DAV::Lock->new({
             'path'      => '/foo/bar',
             'creator'   => 'cecil',
             'owner'     => 'Cecil the Seasick Sea Serpent',
-            'expiry'    => time() + $Net::DAV::Lock::MAX_LOCK_TIMEOUT + 1
-        });
-    };
+            'expiry'    => $now + $Net::DAV::Lock::MAX_LOCK_TIMEOUT + 1
+    });
 
-    ok($@ ne '', 'Warning is thrown when an expiry beyond the maximum is specified');
+    is( $lock->timeout, $Net::DAV::Lock::MAX_LOCK_TIMEOUT, 'expiry value is limited');
 }
 
 {
-    eval {
-        Net::DAV::Lock->new({
+    my $lock = Net::DAV::Lock->new({
             'path'      => '/foo/bar',
             'creator'   => 'cecil',
             'owner'     => 'Cecil the Seasick Sea Serpent',
             'timeout'   => $Net::DAV::Lock::MAX_LOCK_TIMEOUT + 1
-        });
-    };
+    });
 
-    ok($@ ne '', 'Warning is thrown when a timeout beyond the maximum is specified');
+    is( $lock->timeout, $Net::DAV::Lock::MAX_LOCK_TIMEOUT, 'timeout value is limited');
 }
 
 {
