@@ -213,7 +213,7 @@ sub _validate_lock_request {
     }
 
     die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
-    die "Not a clean path\n" if $req->{'path'} !~ m{^/};
+    die "Not a clean path\n" if $req->{'path'} !~ m{^/} && !($req->{'path'} =~ s{^https?://[^/]+/}{/});
     if( defined $req->{'user'} && $req->{'user'} !~ m{^[a-z_.][-a-z0-9_.]*$}i ) {
         die "Not a valid user name.\n";  # May need better validation.
     }
@@ -241,6 +241,9 @@ sub _validate_lock_request {
     $req->{'path'} =~ s{/$}{} unless $req->{'path'} eq '/';
 
     return;
+}
+
+sub _normalize_path {
 }
 
 1;
