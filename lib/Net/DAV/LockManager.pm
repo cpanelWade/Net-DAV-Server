@@ -243,9 +243,6 @@ sub _validate_lock_request {
     return;
 }
 
-sub _normalize_path {
-}
-
 1;
 
 __END__
