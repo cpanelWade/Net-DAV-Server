@@ -422,6 +422,11 @@ sub _delete_xml {
 
 sub delete {
     my ( $self, $request, $response ) = @_;
+
+    if ( !$self->_can_modify($request) ) {
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
+
     my $path = decode_utf8 uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
 
@@ -471,6 +476,13 @@ sub delete {
 sub copy {
     my ( $self, $request, $response ) = @_;
     my $path = decode_utf8 uri_unescape $request->uri->path;
+
+    # need to modify request to pay attention to destination address.
+    my $lockreq = _parse_lock_header( $request );
+    $lockreq->{'path'} = decode_utf8( URI::Escape::uri_unescape( $request->header( 'Destination' ) ) );
+    if ( !$self->_lock_manager()->can_modify( $lockreq ) ) {
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
     my $fs   = $self->filesys;
 
     my $destination = $request->header('Destination');
@@ -582,6 +594,16 @@ sub _copy_file {
 sub move {
     my ( $self, $request, $response ) = @_;
 
+    # need to check both paths for locks.
+    my $lockreq = _parse_lock_header( $request );
+    if ( !$self->_lock_manager()->can_modify( $lockreq ) ) {
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
+    $lockreq->{'path'} = decode_utf8( URI::Escape::uri_unescape( $request->header( 'Destination' ) ) );
+    if ( !$self->_lock_manager()->can_modify( $lockreq ) ) {
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
+
     my $destination = $request->header('Destination');
     $destination = URI->new($destination)->path;
     my $destexists = $self->filesys->test( "e", $destination );
@@ -598,6 +620,11 @@ sub move {
 sub mkcol {
     my ( $self, $request, $response ) = @_;
     my $path = decode_utf8 uri_unescape $request->uri->path;
+
+    if ( !$self->_can_modify($request) ) {
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
+
     my $fs   = $self->filesys;
 
     if ( $request->content ) {
@@ -747,6 +774,15 @@ sub propfind {
                     }
                     $okprops->addChild($prop);
                 }
+                elsif ( $ns eq 'DAV:' && $name eq 'lockdiscovery' ) {
+                    $prop = $doc->createElement('D:lockdiscovery');
+                    my $user = ($request->authorization_basic())[0]||'';
+                    foreach my $lock ( $self->_lock_manager()->list_all_locks({ 'path' => $path, 'user' => $user }) ) {
+                        my $active = _active_lock_prop( $doc, $lock );
+                        $prop->addChild( $active );
+                    }
+                    $okprops->addChild($prop);
+                }
                 else {
                     my $prefix = $prefixes{$ns};
                     if ( !defined $prefix ) {
@@ -813,6 +849,16 @@ sub propfind {
                 }
                 $okprops->addChild($prop);
             };
+            my $user = ($request->authorization_basic())[0]||'';
+            my @locks = $self->_lock_manager()->list_all_locks({ 'path' => $path, 'user' => $user });
+            if ( @locks ) {
+                $prop = $doc->createElement('D:lockdiscovery');
+                foreach my $lock ( @locks ) {
+                    my $active = _active_lock_prop( $doc, $lock );
+                    $prop->addChild( $active );
+                }
+                $okprops->addChild($prop);
+            }
             $prop = $doc->createElement('D:resourcetype');
             if ( $fs->test( 'd', $path ) ) {
                 my $col = $doc->createElement('D:collection');
@@ -840,7 +886,8 @@ sub propfind {
         }
     }
 
-    $response->content( $doc->toString(1) );
+    #this must be 0 as certin ms webdav clients choke on 1
+    $response->content( $doc->toString(0) );
 
     return $response;
 }
