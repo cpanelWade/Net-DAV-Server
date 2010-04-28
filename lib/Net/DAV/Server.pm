@@ -13,6 +13,7 @@ use URI;
 use URI::Escape;
 use XML::LibXML;
 use Net::DAV::LockManager ();
+use Net::DAV::LockManager::DB ();
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
 our $VERSION = '1.30';
@@ -33,8 +34,18 @@ our %implemented = (
 );
 
 sub new {
-    my ($class) = @_;
+    my $class = shift;
+    my %args = @_ % 2 ? () : @_;
     my $self = {};
+    if ( $args{'-dbobj'} ) {
+        $self->{'lock_manager'} = Net::DAV::LockManager->new( $args{'-dbobj'} );
+    }
+    elsif ( $args{'-dbfile'} ) {
+        $self->{'_dsn'} = "dbi:SQLite:dbname=$args{'-dbfile'}";
+    }
+    elsif ( $args{'-dsn'} ) {
+        $self->{'_dsn'} = $args{'-dsn'};
+    }
     bless $self, $class;
     return $self;
 }
@@ -144,11 +155,11 @@ sub _lock_manager {
     my ($self) = @_;
     unless ( $self->{'lock_manager'} ) {
         if ( $self->{'_dsn'} ) {
-            my $db = Cpanel::DAV::LockManager::DB->new( $self->{'_dsn'} );
-            $self->{'lock_manager'} = Cpanel::DAV::LockManager->new($db);
+            my $db = Net::DAV::LockManager::DB->new( $self->{'_dsn'} );
+            $self->{'lock_manager'} = Net::DAV::LockManager->new($db);
         }
         else {
-            $self->{'lock_manager'} = Cpanel::DAV::LockManager->new();
+            $self->{'lock_manager'} = Net::DAV::LockManager->new();
         }
     }
     return $self->{'lock_manager'};
@@ -393,6 +404,20 @@ sub _can_modify {
     return $self->_lock_manager()->can_modify($lockreq);
 }
 
+sub post {
+    my ( $self, $request, $response ) = @_;
+
+    if ( !$self->_can_modify( $request ) ) {
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
+
+    warn "POST not implemented\n";
+    $response->code(501);
+    $response->message('Not Implemented');
+
+    return $response;
+}
+
 sub put {
     my ( $self, $request, $response ) = @_;
 
@@ -634,6 +659,8 @@ sub mkcol {
     elsif ( not $fs->test( "e", $path ) ) {
         $fs->mkdir($path);
         if ( $fs->test( "d", $path ) ) {
+            $response->code(201);
+            $response->message('Created');
         }
         else {
             $response->code(409);

@@ -17,7 +17,7 @@ README
 t/base_new.t
 t/base_options.t
 t/lock_object.t
-t/lock_simple.t
+t/lockmanager__validate_path.t
 t/lockmanager_backends.t
 t/lockmanager_can_modify.t
 t/lockmanager_can_modify_invalid.t
@@ -34,5 +34,10 @@ t/lockmanager_simple.t
 t/lockmanager_unlock.t
 t/lockmanager_unlock_invalid.t
 t/pod.t
+t/server_extract_lock_token.t
+t/server_lock.t
+t/server_mkcol.t
+t/server_new.t
+t/server_options.t
 t/uuid.t
 TODO
