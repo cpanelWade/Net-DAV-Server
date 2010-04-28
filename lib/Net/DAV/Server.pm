@@ -12,19 +12,18 @@ use File::Spec;
 use URI;
 use URI::Escape;
 use XML::LibXML;
+use Net::DAV::LockManager ();
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.29';
+our $VERSION = '1.30';
 
 our %implemented = (
-    options => 1,
-    put     => 1,
-    get     => 1,
-    head    => 1,
-    post    => 1,
-    delete  => 1,
-
-    #  trace    => 1,
+    options  => 1,
+    put      => 1,
+    get      => 1,
+    head     => 1,
+    post     => 1,
+    delete   => 1,
     mkcol    => 1,
     propfind => 1,
     copy     => 1,
@@ -56,8 +55,12 @@ sub run {
     if ( $implemented{$method} ) {
         $response->code(200);
         $response->message('OK');
-        $response = $self->$method( $request, $response );
-        $response->header( 'Content-Length' => length( $response->content ) );
+        eval {
+            $response = $self->$method( $request, $response );
+            $response->header( 'Content-Length' => length( $response->content ) );
+        } or do {
+            return HTTP::Response->new( 400, 'Bad Request' );
+        };
     }
     else {
 
@@ -137,8 +140,266 @@ sub get {
     return $response;
 }
 
+sub _lock_manager {
+    my ($self) = @_;
+    unless ( $self->{'lock_manager'} ) {
+        if ( $self->{'_dsn'} ) {
+            my $db = Cpanel::DAV::LockManager::DB->new( $self->{'_dsn'} );
+            $self->{'lock_manager'} = Cpanel::DAV::LockManager->new($db);
+        }
+        else {
+            $self->{'lock_manager'} = Cpanel::DAV::LockManager->new();
+        }
+    }
+    return $self->{'lock_manager'};
+}
+
+sub lock {
+    my ( $self, $request, $response ) = @_;
+
+    my $lockreq = _parse_lock_request($request);
+
+    # Invalid XML requires a 400 response code.
+    return HTTP::Response->new( 400, 'Bad Request' ) unless defined $lockreq;
+
+    if ( !$lockreq->{'has_content'} ) {
+
+        # Not already locked.
+        return HTTP::Response->new( 403, 'Forbidden' ) if !$lockreq->{'token'};
+
+        # Reset timeout
+        if ( my $lock = $self->_lock_manager()->refresh_lock($lockreq) ) {
+            $response->header( 'Content-Type' => 'text/xml; charset="utf-8"' );
+            $response->content(
+                _lock_response_content(
+                    {
+                        'path'    => $lock->path,
+                        'token'   => $lock->token,
+                        'timeout' => $lock->timeout,
+                        'scope'   => $lock->scope,
+                        'depth'   => $lock->depth,
+                    }
+                )
+            );
+        }
+        else {
+            my $curr = $self->_lock_manager()->find_lock( { 'path' => $lockreq->{'path'} } );
+            return HTTP::Response->new( 412, 'Precondition Failed' ) unless $curr;
+
+            # Not the correct lock token
+            return HTTP::Response->new( 412, 'Precondition Failed' ) if $lockreq->{'token'} ne $curr->token;
+
+            # Not the correct user.
+            return HTTP::Response->new( 403, 'Forbidden' );
+        }
+        return $response;
+    }
+
+    # Validate depth request
+    return HTTP::Response->new( 400, 'Bad Request' ) unless $lockreq->{'depth'} =~ /^(?:0|infinity)$/;
+
+    my $lock = $self->_lock_manager()->lock($lockreq);
+
+    if ( !$lock ) {
+        my $curr = $self->_lock_manager()->find_lock( { 'path' => $lockreq->{'path'} } );
+        return HTTP::Response->new( 412, 'Precondition Failed' ) unless $curr;
+
+        # Not the correct lock token
+        return HTTP::Response->new( 412, 'Precondition Failed' ) if $lockreq->{'token'} ne $curr->token;
+
+        # Resource is already locked
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
+
+    my $token = $lock->token;
+    $response->header( 'Lock-Token',   "<$token>" );
+    $response->header( 'Content-Type', 'text/xml; charset="utf-8"' );
+    $response->content(
+        _lock_response_content(
+            {
+                'path'       => $lock->path,
+                'token'      => $token,
+                'timeout'    => $lock->timeout,
+                'scope'      => 'exclusive',
+                'depth'      => $lock->depth,
+                'owner_node' => $lockreq->{'owner_node'},
+            }
+        )
+    );
+
+    # Create empty file if none exists, as per RFC 4918, Section 9.10.4
+    my $fs = $self->filesys;
+    if ( !$fs->test( 'e', $lock->path ) ) {
+        my $fh = $fs->open_write( $lock->path, 1 );
+        $fs->close_write($fh) if $fh;
+    }
+
+    return $response;
+}
+
+sub _get_timeout {
+    my ($to_header) = @_;
+    return undef unless defined $to_header and length $to_header;
+
+    my @timeouts = sort
+      map { /Second-(\d+)/ ? $1 : $_ }
+      grep { $_ ne 'Infinite' }
+      split /\s*,\s*/, $to_header;
+
+    return undef unless @timeouts;
+    return $timeouts[0];
+}
+
+sub _parse_lock_header {
+    my ($req)   = @_;
+    my $depth   = $req->header('Depth');
+    my %lockreq = (
+        'path' => decode_utf8( URI::Escape::uri_unescape( $req->uri->path ) ),
+
+        # Assuming basic auth for now.
+        'user' => ( $req->authorization_basic() )[0] || '',
+        'token' => ( _extract_lock_token($req) || undef ),
+        'timeout' => _get_timeout( $req->header('Timeout') ),
+        'depth'   => ( defined $depth ? $depth : 'infinity' ),
+    );
+    return \%lockreq;
+}
+
+sub _parse_lock_request {
+    my ($req) = @_;
+    my $lockreq = _parse_lock_header($req);
+    return $lockreq unless $req->content;
+
+    my $parser = XML::LibXML->new;
+    my $doc;
+    eval { $doc = $parser->parse_string( $req->content ); } or do {
+
+        # Request body must be a valid XML request
+        return;
+    };
+    my $xpc = XML::LibXML::XPathContext->new($doc);
+    $xpc->registerNs( 'D', 'DAV:' );
+
+    # Want the following in list context.
+    $lockreq->{'owner_node'} = ( $xpc->findnodes('/D:lockinfo/D:owner') )[0];
+    if ( $lockreq->{'owner_node'} ) {
+        my $owner = $lockreq->{'owner_node'}->toString;
+        $owner =~ s/^<(?:[^:]+:)?owner>//sm;
+        $owner =~ s!</(?:[^:]+:)?owner>$!!sm;
+        $lockreq->{'owner'} = $owner;
+    }
+    $lockreq->{'scope'} = eval { ( $xpc->findnodes('/D:lockinfo/D:lockscope/D:*') )[0]->localname; };
+    $lockreq->{'has_content'} = 1;
+
+    return $lockreq;
+}
+
+sub _extract_lock_token {
+    my ($req) = @_;
+    my $token = $req->header('If');
+    unless ($token) {
+        $token = $req->header('Lock-Token');
+        return $1 if defined $token && $token =~ /<([^>]+)>/;
+        return undef;
+    }
+
+    # Based on the last paragraph of section 10.4.1 of RFC 4918, it appears
+    # that any lock token that appears in the If header is available as a
+    # known lock token. Rather than trying to deal with the whole entity,
+    # lock, implicit and/or, and Not (with and without resources) thing,
+    # This code just returns a list of lock tokens found in the header.
+    my @tokens = map { $_ =~ /<([^>]+)>/g } ( $token =~ /\(([^\)]+)\)/g );
+
+    return undef unless @tokens;
+    return @tokens == 1 ? $tokens[0] : \@tokens;
+}
+
+sub _lock_response_content {
+    my ($args) = @_;
+    my $resp = XML::LibXML::Document->new( '1.0', 'utf-8' );
+    my $prop = _dav_root( $resp, 'prop' );
+    my $lock = _dav_child( _dav_child( $prop, 'lockdiscovery' ), 'activelock' );
+    _dav_child( _dav_child( $lock, 'locktype' ), 'write' );
+    _dav_child( _dav_child( $lock, 'lockscope' ), $args->{'scope'} || 'exclusive' );
+    _dav_child( $lock, 'depth', $args->{'depth'} || 'infinity' );
+    if ( $args->{'owner_node'} ) {
+        my $owner = $args->{'owner_node'}->cloneNode(1);
+        $resp->adoptNode($owner);
+        $lock->addChild($owner);
+    }
+    _dav_child( $lock, 'timeout', "Second-$args->{'timeout'}" );
+    _dav_child( _dav_child( $lock, 'locktoken' ), 'href', $args->{'token'} );
+    _dav_child( _dav_child( $lock, 'lockroot' ),  'href', $args->{'path'} );
+
+    return $resp->toString;
+}
+
+sub _active_lock_prop {
+    my ( $doc, $lock ) = @_;
+    my $active = $doc->createElement('D:activelock');
+
+    # All locks are write
+    _dav_child( _dav_child( $active, 'locktype' ),  'write' );
+    _dav_child( _dav_child( $active, 'lockscope' ), $lock->scope );
+    _dav_child( $active, 'depth', $lock->depth );
+    $active->appendWellBalancedChunk( '<D:owner xmlns:D="DAV:">' . $lock->owner . '</D:owner>' );
+    _dav_child( $active, 'timeout', 'Second-' . $lock->timeout );
+    _dav_child( _dav_child( $active, 'locktoken' ), 'href', $lock->token );
+    _dav_child( _dav_child( $active, 'lockroot' ),  'href', $lock->path );
+
+    return $active;
+}
+
+sub unlock {
+    my ( $self, $request, $response ) = @_;
+    my $path    = decode_utf8( URI::Escape::uri_unescape( $request->uri->path ) );
+    my $lockreq = _parse_lock_header($request);
+
+    # No lock token supplied, we cannot unlock
+    return HTTP::Response->new( 400, 'Bad Request' ) unless $lockreq->{'token'};
+
+    if ( !$self->_lock_manager()->unlock($lockreq) ) {
+        my $curr = $self->_lock_manager()->find_lock( { 'path' => $lockreq->{'path'} } );
+
+        # No lock exists, conflicting requirements.
+        return HTTP::Response->new( 409, 'Conflict' ) unless $curr;
+
+        # Not the owner of the lock or bad token.
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
+
+    return HTTP::Response->new( 204, 'No content' );
+}
+
+sub _dav_child {
+    my ( $parent, $tag, $text ) = @_;
+    my $child = $parent->ownerDocument->createElement("D:$tag");
+    $parent->addChild($child);
+    $child->appendText($text) if defined $text;
+    return $child;
+}
+
+sub _dav_root {
+    my ( $doc, $tag ) = @_;
+    my $root = $doc->createElementNS( 'DAV:', $tag );
+    $root->setNamespace( 'DAV:', 'D', 1 );
+    $doc->setDocumentElement($root);
+    return $root;
+}
+
+sub _can_modify {
+    my ( $self, $request ) = @_;
+    my $lockreq = _parse_lock_header($request);
+    return $self->_lock_manager()->can_modify($lockreq);
+}
+
 sub put {
     my ( $self, $request, $response ) = @_;
+
+    if ( !$self->_can_modify($request) ) {
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
+
     my $path = decode_utf8 uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
 
@@ -218,7 +479,7 @@ sub copy {
     my $overwrite = $request->header('Overwrite') || 'F';
 
     if ( $fs->test( "f", $path ) ) {
-        return $self->copy_file( $request, $response );
+        return $self->_copy_file( $request, $response );
     }
 
     # it's a good approximation
@@ -271,7 +532,7 @@ sub copy {
     return $response;
 }
 
-sub copy_file {
+sub _copy_file {
     my ( $self, $request, $response ) = @_;
     my $path = decode_utf8 uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
@@ -330,26 +591,6 @@ sub move {
       if $response->is_success;
 
     $response->code(201) unless $destexists;
-
-    return $response;
-}
-
-sub lock {
-    my ( $self, $request, $response ) = @_;
-    my $path = decode_utf8 uri_unescape $request->uri->path;
-    my $fs   = $self->filesys;
-
-    $fs->lock($path);
-
-    return $response;
-}
-
-sub unlock {
-    my ( $self, $request, $response ) = @_;
-    my $path = decode_utf8 uri_unescape $request->uri->path;
-    my $fs   = $self->filesys;
-
-    $fs->unlock($path);
 
     return $response;
 }
