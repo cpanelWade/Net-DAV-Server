@@ -47,6 +47,9 @@ sub new {
         $self->{'_dsn'} = $args{'-dsn'};
     }
     bless $self, $class;
+    if ( $args{'-filesys'} ) {
+        $self->filesys( $args{'-filesys'} );
+    }
     return $self;
 }
 
@@ -757,7 +760,7 @@ sub propfind {
             )
         );
         $resp->addChild($href);
-        $href->appendText('/') if $fs->test( 'd', $path );
+        $href->appendText('/') if $fs->test( 'd', $path ) && $path !~ m{/$};
         my $okprops = $doc->createElement('D:prop');
         my $nfprops = $doc->createElement('D:prop');
         my $prop;
@@ -859,7 +862,8 @@ sub propfind {
             $okprops->addChild($prop);
             do {
                 $prop = $doc->createElement('D:supportedlock');
-                for my $n (qw(exclusive shared)) {
+                #for my $n (qw(exclusive shared)) {  # shared is currently not supported.
+                for my $n (qw(exclusive)) {
                     my $lock = $doc->createElement('D:lockentry');
 
                     my $scope = $doc->createElement('D:lockscope');
