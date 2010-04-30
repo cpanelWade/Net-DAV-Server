@@ -764,17 +764,13 @@ sub propfind {
 
         $size ||= '';
 
-        my $resp = $doc->createElement('D:response');
-        $multistat->addChild($resp);
-        my $href = $doc->createElement('D:href');
-        $href->appendText(
+        my $is_dir = $fs->test( 'd', $path );
+        my $resp = _dav_child( $multistat, 'response' );
+        _dav_child( $resp, 'href',
             File::Spec->catdir(
                 map { uri_escape encode_utf8 $_} File::Spec->splitdir($path)
-            )
+            ) . ( $is_dir && $path !~ m{/$} ? '/' : '')
         );
-        $resp->addChild($href);
-        my $is_dir = $fs->test( 'd', $path );
-        $href->appendText('/') if $is_dir && $path !~ m{/$};
         my $okprops = $doc->createElement('D:prop');
         my $nfprops = $doc->createElement('D:prop');
         my $prop;
@@ -786,46 +782,30 @@ sub propfind {
             for my $reqprop (@reqprops) {
                 my ( $ns, $name ) = @$reqprop;
                 if ( $ns eq 'DAV:' && $name eq 'creationdate' ) {
-                    $prop = $doc->createElement('D:creationdate');
-                    $prop->appendText($ctime);
-                    $okprops->addChild($prop);
+                    _dav_child( $okprops, 'creationdate', $ctime );
                 }
                 elsif ( $ns eq 'DAV:' && $name eq 'getcontentlength' ) {
-                    $prop = $doc->createElement('D:getcontentlength');
-                    $prop->appendText($size) unless $is_dir;
-                    $okprops->addChild($prop);
+                    _dav_child( $okprops, 'getcontentlength', $is_dir ? () : ($size) );
                 }
                 elsif ( $ns eq 'DAV:' && $name eq 'getcontenttype' ) {
-                    $prop = $doc->createElement('D:getcontenttype');
-                    if ( $is_dir ) {
-                        $prop->appendText('httpd/unix-directory');
-                    }
-                    else {
-                        $prop->appendText('httpd/unix-file');
-                    }
-                    $okprops->addChild($prop);
+                    _dav_child( $okprops, 'getcontenttype', $is_dir ? 'httpd/unix-directory' : 'httpd/unix-file' );
                 }
                 elsif ( $ns eq 'DAV:' && $name eq 'getlastmodified' ) {
-                    $prop = $doc->createElement('D:getlastmodified');
-                    $prop->appendText($mtime);
-                    $okprops->addChild($prop);
+                    _dav_child( $okprops, 'getlastmodified', $mtime );
                 }
                 elsif ( $ns eq 'DAV:' && $name eq 'resourcetype' ) {
-                    $prop = $doc->createElement('D:resourcetype');
+                    $prop = _dav_child( $okprops, 'resourcetype' );
                     if ( $is_dir ) {
-                        my $col = $doc->createElement('D:collection');
-                        $prop->addChild($col);
+                        _dav_child( $prop, 'collection' );
                     }
-                    $okprops->addChild($prop);
                 }
                 elsif ( $ns eq 'DAV:' && $name eq 'lockdiscovery' ) {
-                    $prop = $doc->createElement('D:lockdiscovery');
+                    $prop = _dav_child( $okprops, 'lockdiscovery' );
                     my $user = ($request->authorization_basic())[0]||'';
                     foreach my $lock ( $self->_lock_manager()->list_all_locks({ 'path' => $path, 'user' => $user }) ) {
                         my $active = _active_lock_prop( $doc, $lock );
                         $prop->addChild( $active );
                     }
-                    $okprops->addChild($prop);
                 }
                 else {
                     my $prefix = $prefixes{$ns};
@@ -845,91 +825,53 @@ sub propfind {
             }
         }
         elsif ( $reqinfo eq 'propname' ) {
-            $prop = $doc->createElement('D:creationdate');
-            $okprops->addChild($prop);
-            $prop = $doc->createElement('D:getcontentlength');
-            $okprops->addChild($prop);
-            $prop = $doc->createElement('D:getcontenttype');
-            $okprops->addChild($prop);
-            $prop = $doc->createElement('D:getlastmodified');
-            $okprops->addChild($prop);
-            $prop = $doc->createElement('D:supportedlock');
-            $okprops->addChild($prop);
-            $prop = $doc->createElement('D:resourcetype');
-            $okprops->addChild($prop);
+            _dav_child( $okprops, 'creationdate' );
+            _dav_child( $okprops, 'getcontentlength' );
+            _dav_child( $okprops, 'getcontenttype' );
+            _dav_child( $okprops, 'getlastmodified' );
+            _dav_child( $okprops, 'supportedlock' );
+            _dav_child( $okprops, 'resourcetype' );
         }
         else {
-            $prop = $doc->createElement('D:creationdate');
-            $prop->appendText($ctime);
-            $okprops->addChild($prop);
-            $prop = $doc->createElement('D:getcontentlength');
-            $prop->appendText($size) unless $is_dir;
-            $okprops->addChild($prop);
-            $prop = $doc->createElement('D:getcontenttype');
-            if ( $is_dir ) {
-                $prop->appendText('httpd/unix-directory');
-            }
-            else {
-                $prop->appendText('httpd/unix-file');
-            }
-            $okprops->addChild($prop);
-            $prop = $doc->createElement('D:getlastmodified');
-            $prop->appendText($mtime);
-            $okprops->addChild($prop);
+            _dav_child( $okprops, 'creationdate', $ctime );
+            _dav_child( $okprops, 'getcontentlength', $is_dir ? () : ($size) );
+            _dav_child( $okprops, 'getcontenttype', $is_dir ? 'httpd/unix-directory' : 'httpd/unix-file' );
+            _dav_child( $okprops, 'getlastmodified', $mtime );
             do {
-                $prop = $doc->createElement('D:supportedlock');
+                $prop = _dav_child( $okprops, 'supportedlock' );
                 #for my $n (qw(exclusive shared)) {  # shared is currently not supported.
                 for my $n (qw(exclusive)) {
-                    my $lock = $doc->createElement('D:lockentry');
+                    my $lock = _dav_child( $prop, 'lockentry' );
 
-                    my $scope = $doc->createElement('D:lockscope');
-                    my $attr  = $doc->createElement( 'D:' . $n );
-                    $scope->addChild($attr);
-                    $lock->addChild($scope);
-
-                    my $type = $doc->createElement('D:locktype');
-                    $attr = $doc->createElement('D:write');
-                    $type->addChild($attr);
-                    $lock->addChild($type);
-
-                    $prop->addChild($lock);
+                    _dav_child( _dav_child( $lock, 'lockscope' ), $n );
+                    _dav_child( _dav_child( $lock, 'locktype' ), 'write' );
                 }
-                $okprops->addChild($prop);
             };
             my $user = ($request->authorization_basic())[0]||'';
             my @locks = $self->_lock_manager()->list_all_locks({ 'path' => $path, 'user' => $user });
             if ( @locks ) {
-                $prop = $doc->createElement('D:lockdiscovery');
+                $prop = _dav_child( $okprops, 'lockdiscovery' );
                 foreach my $lock ( @locks ) {
                     my $active = _active_lock_prop( $doc, $lock );
                     $prop->addChild( $active );
                 }
-                $okprops->addChild($prop);
             }
-            $prop = $doc->createElement('D:resourcetype');
+            $prop = _dav_child( $okprops, 'resourcetype' );
             if ( $is_dir ) {
-                my $col = $doc->createElement('D:collection');
-                $prop->addChild($col);
+                _dav_child( $prop, 'collection' );
             }
-            $okprops->addChild($prop);
         }
 
         if ( $okprops->hasChildNodes ) {
-            my $propstat = $doc->createElement('D:propstat');
+            my $propstat = _dav_child( $resp, 'propstat' );
             $propstat->addChild($okprops);
-            my $stat = $doc->createElement('D:status');
-            $stat->appendText('HTTP/1.1 200 OK');
-            $propstat->addChild($stat);
-            $resp->addChild($propstat);
+            _dav_child( $propstat, 'status', 'HTTP/1.1 200 OK' );
         }
 
         if ( $nfprops->hasChildNodes ) {
-            my $propstat = $doc->createElement('D:propstat');
+            my $propstat = _dav_child( $resp, 'propstat' );
             $propstat->addChild($nfprops);
-            my $stat = $doc->createElement('D:status');
-            $stat->appendText('HTTP/1.1 404 Not Found');
-            $propstat->addChild($stat);
-            $resp->addChild($propstat);
+            _dav_child( $propstat, 'status', 'HTTP/1.1 404 Not Found' );
         }
     }
 
@@ -991,7 +933,9 @@ Leon Brocard <acme@astray.com>
 
 =head1 MAINTAINERS
 
-  Bron Gondwana <perlcode@brong.net> ( current maintainer )
+  G. Wade Johnson <wade@cpanel.net>  ( co-maintainer )
+  Erin Schoenhals <erin@cpanel.net>  ( co-maintainer )
+  Bron Gondwana <perlcode@brong.net> ( co-maintainer )
   Leon Brocard <acme@astray.com>     ( original author )
 
 The latest copy of this package can be checked out using Subversion
