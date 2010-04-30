@@ -72,6 +72,7 @@ sub run {
         eval {
             $response = $self->$method( $request, $response );
             $response->header( 'Content-Length' => length( $response->content ) );
+            1;
         } or do {
             return HTTP::Response->new( 400, 'Bad Request' );
         };
