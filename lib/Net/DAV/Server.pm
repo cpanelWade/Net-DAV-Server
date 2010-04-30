@@ -773,7 +773,8 @@ sub propfind {
             )
         );
         $resp->addChild($href);
-        $href->appendText('/') if $fs->test( 'd', $path ) && $path !~ m{/$};
+        my $is_dir = $fs->test( 'd', $path );
+        $href->appendText('/') if $is_dir && $path !~ m{/$};
         my $okprops = $doc->createElement('D:prop');
         my $nfprops = $doc->createElement('D:prop');
         my $prop;
@@ -791,12 +792,12 @@ sub propfind {
                 }
                 elsif ( $ns eq 'DAV:' && $name eq 'getcontentlength' ) {
                     $prop = $doc->createElement('D:getcontentlength');
-                    $prop->appendText($size);
+                    $prop->appendText($size) unless $is_dir;
                     $okprops->addChild($prop);
                 }
                 elsif ( $ns eq 'DAV:' && $name eq 'getcontenttype' ) {
                     $prop = $doc->createElement('D:getcontenttype');
-                    if ( $fs->test( 'd', $path ) ) {
+                    if ( $is_dir ) {
                         $prop->appendText('httpd/unix-directory');
                     }
                     else {
@@ -811,7 +812,7 @@ sub propfind {
                 }
                 elsif ( $ns eq 'DAV:' && $name eq 'resourcetype' ) {
                     $prop = $doc->createElement('D:resourcetype');
-                    if ( $fs->test( 'd', $path ) ) {
+                    if ( $is_dir ) {
                         my $col = $doc->createElement('D:collection');
                         $prop->addChild($col);
                     }
@@ -862,10 +863,10 @@ sub propfind {
             $prop->appendText($ctime);
             $okprops->addChild($prop);
             $prop = $doc->createElement('D:getcontentlength');
-            $prop->appendText($size);
+            $prop->appendText($size) unless $is_dir;
             $okprops->addChild($prop);
             $prop = $doc->createElement('D:getcontenttype');
-            if ( $fs->test( 'd', $path ) ) {
+            if ( $is_dir ) {
                 $prop->appendText('httpd/unix-directory');
             }
             else {
@@ -906,7 +907,7 @@ sub propfind {
                 $okprops->addChild($prop);
             }
             $prop = $doc->createElement('D:resourcetype');
-            if ( $fs->test( 'd', $path ) ) {
+            if ( $is_dir ) {
                 my $col = $doc->createElement('D:collection');
                 $prop->addChild($col);
             }
