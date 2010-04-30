@@ -839,6 +839,8 @@ sub propfind {
             $okprops->addChild($prop);
             $prop = $doc->createElement('D:getlastmodified');
             $okprops->addChild($prop);
+            $prop = $doc->createElement('D:supportedlock');
+            $okprops->addChild($prop);
             $prop = $doc->createElement('D:resourcetype');
             $okprops->addChild($prop);
         }
