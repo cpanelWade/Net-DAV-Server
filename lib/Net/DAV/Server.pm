@@ -472,14 +472,14 @@ sub delete {
     my $fs   = $self->filesys;
 
     if ( $request->uri->fragment ) {
-        return HTTP::Response->new( 404, "NOT FOUND", $response->headers );
+        return HTTP::Response->new( 404, 'Not Found', $response->headers );
     }
 
     unless ( $fs->test( "e", $path ) ) {
-        return HTTP::Response->new( 404, "NOT FOUND", $response->headers );
+        return HTTP::Response->new( 404, 'Not Found', $response->headers );
     }
 
-    my $dom = XML::LibXML::Document->new( "1.0", "utf-8" );
+    my $dom = XML::LibXML::Document->new( '1.0', 'utf-8' );
     my @error;
     foreach my $part (
         grep { $_ !~ m{/\.\.?$} }
@@ -487,29 +487,29 @@ sub delete {
         File::Find::Rule::Filesys::Virtual->virtual($fs)->in($path), $path
       ) {
 
-        next unless $fs->test( "e", $part );
+        next unless $fs->test( 'e', $part );
 
-        if ( $fs->test( "f", $part ) ) {
+        if ( $fs->test( 'f', $part ) ) {
             push @error, _delete_xml( $dom, $part )
               unless $fs->delete($part);
         }
-        elsif ( $fs->test( "d", $part ) ) {
+        elsif ( $fs->test( 'd', $part ) ) {
             push @error, _delete_xml( $dom, $part )
               unless $fs->rmdir($part);
         }
     }
 
     if (@error) {
-        my $multistatus = $dom->createElement("D:multistatus");
-        $multistatus->setAttribute( "xmlns:D", "DAV:" );
+        my $multistatus = $dom->createElement('D:multistatus');
+        $multistatus->setAttribute( 'xmlns:D', 'DAV:' );
 
         $multistatus->addChild($_) foreach @error;
 
-        $response = HTTP::Response->new( 207 => "Multi-Status" );
-        $response->header( "Content-Type" => 'text/xml; charset="utf-8"' );
+        $response = HTTP::Response->new( 207 => 'Multi-Status' );
+        $response->header( 'Content-Type' => 'text/xml; charset="utf-8"' );
     }
     else {
-        $response = HTTP::Response->new( 204 => "No Content" );
+        $response = HTTP::Response->new( 204 => 'No Content' );
     }
     return $response;
 }
