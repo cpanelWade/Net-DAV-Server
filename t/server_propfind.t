@@ -48,121 +48,266 @@ my $parser = XML::LibXML->new();
     }
 }
 
+# Missing resource
 {
-    my $label = 'Missing item';
+    my $label = 'Missing item, default';
+    my $path = '/fred';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
     my $fs = $dav->filesys;
 
-    ok( !$fs->test( 'e', '/fred' ), "$label: target does not initially exist" );
-    my $req = HTTP::Request->new( PROPFIND => '/fred' );
-    $req->authorization_basic( 'fred', 'fredmobile' );
+    ok( !$fs->test( 'e', $path ), "$label: target does not initially exist" );
+    my $req = propfind_request( $path );
 
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 404, "$label: Response is 'Not Found'" );
 }
 
 {
-    my $label = 'Depth 1 dir, default';
+    my $label = 'Missing resource, allprop';
+    my $path = '/fred';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
     my $fs = $dav->filesys;
 
-    ok( $fs->test( 'e', '/' ), "$label: root directory exists" );
-    my $req = HTTP::Request->new( PROPFIND => '/' );
-    $req->authorization_basic( 'fred', 'fredmobile' );
+    ok( !$fs->test( 'e', $path ), "$label: target does not initially exist" );
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:allprop/></D:propfind>'
+    );
 
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
-    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
-    my $xpc = get_xml_context( $resp->content );
-    has_text( $xpc, '/D:multistatus/D:response/D:href', '/', "$label: Path is correct" );
-    has_nodes( $xpc,
-        '/D:multistatus/D:response/D:propstat/D:prop[1]',
-        [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
-        "$label: Property nodes"
-    );
-    has_node( $xpc,
-        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope',
-        'exclusive',
-        "$label: supported scopes"
-    );
+    is( $resp->code, 404, "$label: Response is 'Not Found'" );
 }
 
 {
-    my $label = 'File, default';
+    my $label = 'Missing resource, propname';
+    my $path = '/fred';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
     my $fs = $dav->filesys;
 
-    ok( $fs->test( 'e', '/test.html' ), "$label: file exists" );
-    my $req = HTTP::Request->new( PROPFIND => '/test.html' );
-    $req->authorization_basic( 'fred', 'fredmobile' );
+    ok( !$fs->test( 'e', $path ), "$label: target does not initially exist" );
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:propname/></D:propfind>'
+    );
+
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 404, "$label: Response is 'Not Found'" );
+}
+
+# Directory
+{
+    my $label = 'Depth 1 dir, default';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    ok( $fs->test( 'e', $path ), "$label: root directory exists" );
+    my $req = propfind_request( $path );
 
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
     my $xpc = get_xml_context( $resp->content );
-    has_text( $xpc, '/D:multistatus/D:response/D:href', '/test.html', "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
     has_nodes( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop[1]',
         [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
         "$label: Property nodes"
     );
     has_node( $xpc,
-        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope',
-        'exclusive',
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
         "$label: supported scopes"
+    );
+    has_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
+        'httpd/unix-directory',
+        "$label: content type is correct"
+    );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:resourcetype/D:collection',
+        "$label: resource type is correct"
     );
 }
 
 {
     my $label = 'Depth 1 dir, allprop';
+    my $path = '/';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
     my $fs = $dav->filesys;
 
-    ok( $fs->test( 'e', '/' ), "$label: root directory exists" );
-    my $req = HTTP::Request->new( PROPFIND => '/' );
-    $req->content( '<D:propfind xmlns:D="DAV:"><D:allprop/></D:propfind>' );
-    $req->header( 'Content-Length', length $req->content );
-    $req->authorization_basic( 'fred', 'fredmobile' );
+    ok( $fs->test( 'e', $path ), "$label: root directory exists" );
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:allprop/></D:propfind>'
+    );
 
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
     my $xpc = get_xml_context( $resp->content );
-    has_text( $xpc, '/D:multistatus/D:response/D:href', '/', "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
     has_nodes( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop[1]',
         [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
         "$label: Property nodes"
     );
     has_node( $xpc,
-        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope',
-        'exclusive',
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
         "$label: supported scopes"
+    );
+    has_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
+        'httpd/unix-directory',
+        "$label: content type is correct"
+    );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:resourcetype/D:collection',
+        "$label: resource type is correct"
+    );
+}
+
+{
+    my $label = 'Directory, propname';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    ok( $fs->test( 'e', $path ), "$label: file exists" );
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:propname/></D:propfind>'
+    );
+
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_nodes( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]',
+        [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
+        "$label: Property nodes"
+    );
+}
+
+{
+    my $label = 'Directory, creationdate';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:creationdate/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
+        "$label: Property exists"
+    );
+}
+
+# File
+{
+    my $label = 'File, default';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    ok( $fs->test( 'e', $path ), "$label: file exists" );
+    my $req = propfind_request( $path );
+
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_nodes( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]',
+        [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
+        "$label: Property nodes"
+    );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
+        "$label: supported scopes"
+    );
+    has_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
+        'httpd/unix-file',
+        "$label: content type is correct"
     );
 }
 
 {
     my $label = 'File, allprop';
+    my $path = '/test.html';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
     my $fs = $dav->filesys;
 
-    ok( $fs->test( 'e', '/test.html' ), "$label: file exists" );
-    my $req = HTTP::Request->new( PROPFIND => '/test.html' );
-    $req->content( '<D:propfind xmlns:D="DAV:"><D:allprop/></D:propfind>' );
-    $req->header( 'Content-Length', length $req->content );
-    $req->authorization_basic( 'fred', 'fredmobile' );
+    ok( $fs->test( 'e', $path ), "$label: file exists" );
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:allprop/></D:propfind>'
+    );
 
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
     my $xpc = get_xml_context( $resp->content );
-    has_text( $xpc, '/D:multistatus/D:response/D:href', '/test.html', "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
     has_nodes( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop[1]',
         [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
         "$label: Property nodes"
     );
     has_node( $xpc,
-        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope',
-        'exclusive',
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
         "$label: supported scopes"
     );
+    has_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
+        'httpd/unix-file',
+        "$label: content type is correct"
+    );
+}
+
+{
+    my $label = 'File, propname';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    ok( $fs->test( 'e', $path ), "$label: file exists" );
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:propname/></D:propfind>'
+    );
+
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_nodes( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]',
+        [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
+        "$label: Property nodes"
+    );
+}
+
+# -------- Utility subs ----------
+
+sub propfind_request {
+    my ($path, $content) = @_;
+
+    my $req = HTTP::Request->new( PROPFIND => $path );
+    if ( defined $content ) {
+        $req->content( $content );
+        $req->header( 'Content-Length', length $content );
+    }
+    $req->authorization_basic( 'fred', 'fredmobile' );
+    return $req;
 }
 
 sub get_xml_context {
@@ -177,23 +322,35 @@ sub get_xml_context {
 sub has_text {
     my ($xpc, $xpath, $expect, $label) = @_;
     my @nodes = $xpc->findnodes( "$xpath/text()" );
+    unless ( defined $nodes[0] ) {
+        fail( "$label : Node not found." );
+        return;
+    }
     is( $nodes[0]->data, $expect, $label );
 }
 
 sub has_texts {
     my ($xpc, $xpath, $expect, $label) = @_;
     my @nodes = map { $_->data } $xpc->findnodes( "$xpath/text()" );
+    unless ( defined $nodes[0] ) {
+        fail( "$label : Node not found." );
+        return;
+    }
     is_deeply( \@nodes, $expect, $label );
 }
 
 sub has_nodes {
     my ($xpc, $xpath, $tags, $label) = @_;
     my @nodes = map { $_->localname } $xpc->findnodes( "$xpath/D:*" );
+    unless ( defined $nodes[0] ) {
+        fail( "$label : Node not found." );
+        return;
+    }
     is_deeply( \@nodes, $tags, $label );
 }
 
 sub has_node {
     my ($xpc, $xpath, $tag, $label) = @_;
-    my @nodes = map { $_->localname } $xpc->findnodes( "$xpath/D:*" );
-    is( $nodes[0], $tag, $label );
+    my @nodes = $xpc->findnodes( $xpath );
+    ok ( defined $nodes[0], $label );
 }
