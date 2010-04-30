@@ -114,6 +114,11 @@ my $parser = XML::LibXML->new();
         [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
         "$label: Property nodes"
     );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
+        qr/^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$/,
+        "$label: Date/time format is correct"
+    );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
         "$label: supported scopes"
@@ -122,6 +127,11 @@ my $parser = XML::LibXML->new();
         '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
         'httpd/unix-directory',
         "$label: content type is correct"
+    );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getlastmodified',
+        qr/^\w\w\w, \d\d? \w\w\w \d\d\d\d \d\d:\d\d:\d\d \w+$/,
+        "$label: Date/time format is correct"
     );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:resourcetype/D:collection',
@@ -151,6 +161,11 @@ my $parser = XML::LibXML->new();
         [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
         "$label: Property nodes"
     );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
+        qr/^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$/,
+        "$label: Date/time format is correct"
+    );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
         "$label: supported scopes"
@@ -159,6 +174,11 @@ my $parser = XML::LibXML->new();
         '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
         'httpd/unix-directory',
         "$label: content type is correct"
+    );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getlastmodified',
+        qr/^\w\w\w, \d\d? \w\w\w \d\d\d\d \d\d:\d\d:\d\d \w+$/,
+        "$label: Date/time format is correct"
     );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:resourcetype/D:collection',
@@ -202,10 +222,133 @@ my $parser = XML::LibXML->new();
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
     my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
         "$label: Property exists"
     );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
+        qr/^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$/,
+        "$label: Date/time format is correct"
+    );
+}
+
+{
+    my $label = 'Directory, getcontentlength';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:getcontentlength/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getcontentlength',
+        "$label: Property exists"
+    );
+}
+
+{
+    my $label = 'Directory, getcontenttype';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:getcontenttype/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getcontenttype',
+        "$label: Property exists"
+    );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype', 'httpd/unix-directory', "$label: contenttype is correct" );
+}
+
+{
+    my $label = 'Directory, getlastmodified';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:getlastmodified/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getlastmodified',
+        "$label: Property exists"
+    );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getlastmodified',
+        qr/^\w\w\w, \d\d? \w\w\w \d\d\d\d \d\d:\d\d:\d\d \w+$/,
+        "$label: Date/time format is correct"
+    );
+}
+
+{
+    my $label = 'Directory, resourcetype';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:resourcetype/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:resourcetype/D:collection',
+        "$label: Property exists"
+    );
+}
+
+{
+    my $label = 'Directory, lockdiscovery';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:lockdiscovery/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:lockdiscovery',
+        "$label: Property exists"
+    );
+}
+
+{
+    my $label = 'Directory, bad property';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:xyzzy/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 404 Not Found', "$label: Status is correct" );
+
 }
 
 # File
@@ -228,6 +371,11 @@ my $parser = XML::LibXML->new();
         [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
         "$label: Property nodes"
     );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
+        qr/^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$/,
+        "$label: Date/time format is correct"
+    );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
         "$label: supported scopes"
@@ -236,6 +384,16 @@ my $parser = XML::LibXML->new();
         '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
         'httpd/unix-file',
         "$label: content type is correct"
+    );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getlastmodified',
+        qr/^\w\w\w, \d\d? \w\w\w \d\d\d\d \d\d:\d\d:\d\d \w+$/,
+        "$label: Date/time format is correct"
+    );
+    has_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getcontentlength',
+        '1024',
+        "$label: content length is correct"
     );
 }
 
@@ -261,6 +419,11 @@ my $parser = XML::LibXML->new();
         [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
         "$label: Property nodes"
     );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
+        qr/^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$/,
+        "$label: Date/time format is correct"
+    );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
         "$label: supported scopes"
@@ -269,6 +432,16 @@ my $parser = XML::LibXML->new();
         '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
         'httpd/unix-file',
         "$label: content type is correct"
+    );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getlastmodified',
+        qr/^\w\w\w, \d\d? \w\w\w \d\d\d\d \d\d:\d\d:\d\d \w+$/,
+        "$label: Date/time format is correct"
+    );
+    has_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getcontentlength',
+        '1024',
+        "$label: content length is correct"
     );
 }
 
@@ -294,6 +467,152 @@ my $parser = XML::LibXML->new();
         [ qw/creationdate getcontentlength getcontenttype getlastmodified supportedlock resourcetype/ ],
         "$label: Property nodes"
     );
+}
+
+{
+    my $label = 'File, creationdate';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:creationdate/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
+        "$label: Property exists"
+    );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
+        qr/^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$/,
+        "$label: Date/time format is correct"
+    );
+}
+
+{
+    my $label = 'File, getcontentlength';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:getcontentlength/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getcontentlength',
+        "$label: Property exists"
+    );
+    has_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getcontentlength',
+        '1024',
+        "$label: content length is correct"
+    );
+}
+
+{
+    my $label = 'File, getcontenttype';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:getcontenttype/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getcontenttype',
+        "$label: Property exists"
+    );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype', 'httpd/unix-file', "$label: contenttype is correct" );
+}
+
+{
+    my $label = 'File, getlastmodified';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:getlastmodified/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getlastmodified',
+        "$label: Property exists"
+    );
+    like_text( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:getlastmodified',
+        qr/^\w\w\w, \d\d? \w\w\w \d\d\d\d \d\d:\d\d:\d\d \w+$/,
+        "$label: Date/time format is correct"
+    );
+}
+
+{
+    my $label = 'File, resourcetype';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:resourcetype/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:resourcetype',
+        "$label: Property exists"
+    );
+}
+
+{
+    my $label = 'File, lockdiscovery';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:lockdiscovery/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:lockdiscovery',
+        "$label: Property exists"
+    );
+}
+
+{
+    my $label = 'File, bad property';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:xyzzy/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 404 Not Found', "$label: Status is correct" );
+
 }
 
 # -------- Utility subs ----------
@@ -327,6 +646,16 @@ sub has_text {
         return;
     }
     is( $nodes[0]->data, $expect, $label );
+}
+
+sub like_text {
+    my ($xpc, $xpath, $expect, $label) = @_;
+    my @nodes = $xpc->findnodes( "$xpath/text()" );
+    unless ( defined $nodes[0] ) {
+        fail( "$label : Node not found." );
+        return;
+    }
+    like( $nodes[0]->data, $expect, $label );
 }
 
 sub has_texts {
