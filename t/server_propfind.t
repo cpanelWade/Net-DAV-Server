@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More 'no_plan'; #tests => 1;
+use Test::More tests => 103;
 use Carp;
 
 use strict;
