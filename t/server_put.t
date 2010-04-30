@@ -1,0 +1,137 @@
+#!/usr/bin/perl
+
+use Test::More !eval { use IO::Scalar; 1 } ? (skip_all => 'IO::Scalar not available') : 'no_plan'; #(tests => 1);
+use Carp;
+
+use strict;
+use warnings;
+
+use Net::DAV::Server ();
+use Net::DAV::LockManager::Simple ();
+use XML::LibXML;
+use XML::LibXML::XPathContext;
+
+my $parser = XML::LibXML->new();
+
+{
+    package Mock::Filesys;
+    sub new {
+        return bless {
+            fs => {
+                '/' =>               'd',
+                '/foo' =>            'd',
+                '/foo/bar' =>        'd',
+                '/test.html' =>      'f',
+            }
+        };
+    }
+    sub test {
+        my ($self, $op, $path) = @_;
+
+        if ( $op eq 'e' ) {
+            return exists $self->{'fs'}->{$path};
+        }
+        elsif ( $op eq 'd' ) {
+            return unless exists $self->{'fs'}->{$path};
+            return $self->{'fs'}->{$path} eq 'd';
+        }
+        elsif ( $op eq 'f' ) {
+            return unless exists $self->{'fs'}->{$path};
+            return $self->{'fs'}->{$path} eq 'f';
+        }
+        else {
+            die "Operation $op not implemented.";
+        }
+    }
+    sub open_write {
+        my ($self, $path) = @_;
+        return if $path eq '/no_open';
+        $self->{'fh'} = IO::Scalar->new();
+        $self->{'fs'}->{$path} = 'f';
+        return $self->{'fh'};
+    }
+    sub close_write {
+        my ($self, $fh) = @_;
+        close( $fh );
+    }
+}
+
+{
+    my $label = 'Simple file create';
+    my $path = '/fred.txt';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    ok( !$fs->test( 'e', $path ), "$label: target does not initially exist" );
+    my $req = put_request( $path );
+
+    my $resp = $dav->put( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 201, "$label: Response is 'Created'" );
+    ok( $fs->test( 'f', $path ), "$label: target now exists" );
+}
+
+{
+    my $label = 'Overwrite existing file';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    ok( $fs->test( 'f', $path ), "$label: target does initially exist" );
+    my $req = put_request( $path );
+
+    my $resp = $dav->put( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 201, "$label: Response is 'Created'" );
+    ok( $fs->test( 'f', $path ), "$label: target now exists" );
+}
+
+{
+    my $label = 'Try to put a collection';
+    my $path = '/foo';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    ok( $fs->test( 'd', $path ), "$label: target is a collection" );
+    my $req = put_request( $path );
+
+    my $resp = $dav->put( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 405, "$label: Response is 'Method not allowed'" );
+}
+
+{
+    my $label = 'Write file to non-existent directory';
+    my $path = '/baz/foo/test.txt';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    ok( !$fs->test( 'e', $path ), "$label: target does not exist" );
+    my $req = put_request( $path );
+
+    my $resp = $dav->put( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 409, "$label: Response is 'Conflict'" );
+}
+
+{
+    my $label = 'Cannot write file';
+    my $path = '/no_open';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    ok( !$fs->test( 'e', $path ), "$label: target does not exist" );
+    my $req = put_request( $path );
+
+    my $resp = $dav->put( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 403, "$label: Response is 'Forbidden'" );
+}
+
+# -------- Utility subs ----------
+
+sub put_request {
+    my ($path) = @_;
+
+    my $req = HTTP::Request->new( put => $path );
+    my $content = 'A little fake content.';
+    $req->content( $content );
+    $req->header( 'Content-Length', length $content );
+    $req->authorization_basic( 'fred', 'fredmobile' );
+    return $req;
+}

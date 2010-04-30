@@ -431,11 +431,23 @@ sub put {
     my $path = decode_utf8 uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
 
-    $response = HTTP::Response->new( 201, "CREATED", $response->headers );
+    return HTTP::Response->new( 405, 'Method Not Allowed' ) if $fs->test( 'd', $path );
+    my $parent = $path;
+    $parent =~ s{/[^/]+$}{};
+    $parent = '/' if $parent eq '';
+    # Parent directory does not exist.
+    return HTTP::Response->new( 409, 'Conflict' ) unless $fs->test( 'd', $parent );
 
-    my $fh = $fs->open_write($path);
-    print $fh $request->content;
-    $fs->close_write($fh);
+    my $fh = $fs->open_write( $path );
+    if ( $fh ) {
+        $response = HTTP::Response->new( 201, "CREATED", $response->headers );
+        print $fh $request->content;
+        $fs->close_write($fh);
+    }
+    else {
+        # Unable to write for some other reason.
+        return HTTP::Response->new( 403, 'Forbidden' );
+    }
 
     return $response;
 }
