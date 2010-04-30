@@ -10,7 +10,6 @@ use Net::DAV::Server ();
 use Net::DAV::LockManager::Simple ();
 use XML::LibXML;
 use XML::LibXML::XPathContext;
-use Data::Dumper;
 
 my $parser = XML::LibXML->new();
 
