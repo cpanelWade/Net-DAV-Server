@@ -416,10 +416,7 @@ sub post {
     }
 
     warn "POST not implemented\n";
-    $response->code(501);
-    $response->message('Not Implemented');
-
-    return $response;
+    return HTTP::Response->new( 501, 'Not Implemented' );
 }
 
 sub put {
@@ -441,7 +438,7 @@ sub put {
 
     my $fh = $fs->open_write( $path );
     if ( $fh ) {
-        $response = HTTP::Response->new( 201, "CREATED", $response->headers );
+        $response = HTTP::Response->new( 201, 'Created', $response->headers );
         print $fh $request->content;
         $fs->close_write($fh);
     }
@@ -456,9 +453,9 @@ sub put {
 sub _delete_xml {
     my ( $dom, $path ) = @_;
 
-    my $response = $dom->createElement("d:response");
-    $response->appendTextChild( "d:href"   => $path );
-    $response->appendTextChild( "d:status" => "HTTP/1.1 401 Permission Denied" );    # *** FIXME ***
+    my $response = $dom->createElement('d:response');
+    $response->appendTextChild( 'd:href'   => $path );
+    $response->appendTextChild( 'd:status' => 'HTTP/1.1 401 Permission Denied' );    # *** FIXME ***
 }
 
 sub delete {
@@ -475,7 +472,7 @@ sub delete {
         return HTTP::Response->new( 404, 'Not Found', $response->headers );
     }
 
-    unless ( $fs->test( "e", $path ) ) {
+    unless ( $fs->test( 'e', $path ) ) {
         return HTTP::Response->new( 404, 'Not Found', $response->headers );
     }
 
@@ -565,13 +562,14 @@ sub copy {
         my $fh = $fs->open_read($file);
         my $file = join '', <$fh>;
         $fs->close_read($fh);
-        if ( $fs->test( "e", $destfile ) ) {
+        if ( $fs->test( 'e', $destfile ) ) {
             if ( $overwrite eq 'T' ) {
                 $fh = $fs->open_write($destfile);
                 print $fh $file;
                 $fs->close_write($fh);
             }
             else {
+                return HTTP::Response( 412, 'Precondition Failed' );
             }
         }
         else {
@@ -581,7 +579,7 @@ sub copy {
         }
     }
 
-    $response = HTTP::Response->new( 200, "OK", $response->headers );
+    $response = HTTP::Response->new( 200, 'OK', $response->headers );
     return $response;
 }
 
@@ -595,29 +593,26 @@ sub _copy_file {
     my $depth     = $request->header('Depth');
     my $overwrite = $request->header('Overwrite');
 
-    if ( $fs->test( "d", $destination ) ) {
-        $response = HTTP::Response->new( 204, "NO CONTENT", $response->headers );
+    if ( $fs->test( 'd', $destination ) ) {
+        return HTTP::Response->new( 204, 'No Content', $response->headers );
     }
-    elsif ( $fs->test( "f", $path ) && $fs->test( "r", $path ) ) {
+    if ( $fs->test( 'f', $path ) && $fs->test( 'r', $path ) ) {
         my $fh = $fs->open_read($path);
         my $file = join '', <$fh>;
         $fs->close_read($fh);
-        if ( $fs->test( "f", $destination ) ) {
+        if ( $fs->test( 'f', $destination ) ) {
             if ( $overwrite eq 'T' ) {
                 $fh = $fs->open_write($destination);
                 print $fh $file;
                 $fs->close_write($fh);
             }
             else {
-                $response->code(412);
-                $response->message('Precondition Failed');
+                return HTTP::Response( 412, 'Precondition Failed' );
             }
         }
         else {
             unless ( $fh = $fs->open_write($destination) ) {
-                $response->code(409);
-                $response->message('Conflict');
-                return $response;
+                return HTTP::Response->new( 409, 'Conflict' );
             }
             print $fh $file;
             $fs->close_write($fh);
@@ -626,9 +621,9 @@ sub _copy_file {
         }
     }
     else {
-        $response->code(404);
-        $response->message('Not Found');
+        return HTTP::Response->new( 404, 'Not Found' );
     }
+
     return $response;
 }
 
@@ -668,25 +663,18 @@ sub mkcol {
 
     my $fs   = $self->filesys;
 
-    if ( $request->content ) {
-        $response->code(415);
-        $response->message('Unsupported Media Type');
-    }
-    elsif ( not $fs->test( "e", $path ) ) {
-        $fs->mkdir($path);
-        if ( $fs->test( "d", $path ) ) {
-            $response->code(201);
-            $response->message('Created');
-        }
-        else {
-            $response->code(409);
-            $response->message('Conflict');
-        }
+    return HTTP::Response->new( 415, 'Unsupported Media Type' ) if $request->content;
+    return HTTP::Response->new( 405, 'Method Not Allowed' ) if $fs->test( 'e', $path );
+    $fs->mkdir($path);
+    if ( $fs->test( 'd', $path ) ) {
+        $response->code(201);
+        $response->message('Created');
     }
     else {
-        $response->code(405);
-        $response->message('Method Not Allowed');
+        $response->code(409);
+        $response->message('Conflict');
     }
+
     return $response;
 }
 
@@ -704,9 +692,7 @@ sub propfind {
         my $doc;
         eval { $doc = $parser->parse_string($content); };
         if ($@) {
-            $response->code(400);
-            $response->message('Bad Request');
-            return $response;
+            return HTTP::Response->new( 400, 'Bad Request' );
         }
 
         #$reqinfo = doc->find('/DAV:propfind/*')->localname;
@@ -721,9 +707,7 @@ sub propfind {
     }
 
     if ( !$fs->test( 'e', $path ) ) {
-        $response->code(404);
-        $response->message('Not Found');
-        return $response;
+        return HTTP::Response->new( 404, 'Not Found' );
     }
 
     $response->code(207);
