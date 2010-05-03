@@ -1,5 +1,12 @@
 CHANGES file for Net::DAV::Server
 
+1.30 ????
+  - Add LOCK/UNLOCK implementation
+    * Bugfix: RT#56096 - Remove trace from implemented list.
+    * Bugfix: RT#56099 - Don't call lock/unlock on filesys object.
+    * Bugfix: RT#56097 - Make lock method return valid response
+    * Bugfix: RT#56098 - Add locking checks to methods that modify
+  - Bugfix: RT#56082 - Add a post method that returns 'not implemented'
 1.29 Wed Jul 19 11:42:56 EST 2006
   - Bugfix: RT#17077 - uninitialised variable.  
     -- Thanks to CLOTHO

@@ -1,0 +1,10 @@
+.*.swp
+Makefile
+pm_to_blib
+blib
+*.gz
+*.old
+*.bak
+Build
+_build
+cover_db
