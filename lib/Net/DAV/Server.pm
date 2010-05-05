@@ -56,7 +56,7 @@ sub new {
 sub run {
     my ( $self, $request, $response ) = @_;
 
-    my $fs = $self->filesys || die 'Boom';
+    my $fs = $self->filesys || die 'Filesys missing';
 
     my $method = $request->method;
     my $path   = decode_utf8 uri_unescape $request->uri->path;

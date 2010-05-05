@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More 'no_plan'; #tests => 1;
+use Test::More tests => 9;
 use Carp;
 
 use strict;
@@ -8,10 +8,6 @@ use warnings;
 
 use HTTP::Request;
 use HTTP::Response;
-
-use FindBin;
-use lib "$FindBin::Bin/..";
-use lib "/usr/local/cpanel";
 
 {
     package Mock::FileSystem::Locking;
