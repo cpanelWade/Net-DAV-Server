@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 35;
+use Test::More tests => 41;
 use Carp;
 
 use strict;
@@ -212,6 +212,35 @@ print STDERR $@ if $@;
     $resp = eval { $dav->lock( $req, HTTP::Response->new( 200 ) ); };
     isa_ok( $resp, 'HTTP::Response', "$label: second lock return response" );
     is( $resp->code, 412, "\t... with a 'Precondition Failed' error status." );
+
+    $token =~ tr/<>//d;
+    $req = unlock_request( $resource, $token );
+    $resp = eval { $dav->unlock( $req, HTTP::Response->new( 200 ) ); };
+    isa_ok( $resp, 'HTTP::Response', "$label: unlock returns a response" );
+    is( $resp->code, 204, "\t... with a 'No Content' status" );
+}
+
+{
+    my $label = 'Refresh Lock w/ wrong user';
+    my $dav = Net::DAV::Server->new( -dbobj => Net::DAV::LockManager::Simple->new() );
+    $dav->filesys( Mock::Filesys->new() );
+    my $resource = '/directory/file';
+
+    my $req = lock_request( $resource,
+        { timeout=>'Infinite, Second-4100000000', scope=>'exclusive', owner_href=>'http://example.org/~fred/contact.html'}
+    );
+    my $resp = eval { $dav->lock( $req, HTTP::Response->new( 200 ) ); };
+print STDERR $@ if $@;
+    isa_ok( $resp, 'HTTP::Response', "$label: First lock returns response" );
+    is( $resp->code, 200, "\t... with a 'Success' status." );
+    my $token = $resp->header( 'Lock-Token' );
+
+    $token =~ tr/<>//d;
+    $req = HTTP::Request->new( LOCK => $resource, [ 'Timeout' => 60, 'If' => "(<$token>)" ] );
+    $req->authorization_basic( 'wade', 'fredmobile' );
+    $resp = eval { $dav->lock( $req, HTTP::Response->new( 200 ) ); };
+    isa_ok( $resp, 'HTTP::Response', "$label: second lock return response" );
+    is( $resp->code, 403, "\t... with a 'Forbidden' error status." );
 
     $token =~ tr/<>//d;
     $req = unlock_request( $resource, $token );

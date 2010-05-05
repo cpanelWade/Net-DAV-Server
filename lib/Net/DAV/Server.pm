@@ -80,7 +80,6 @@ sub run {
     else {
 
         # Saying it isn't implemented is better than crashing!
-        warn "$method not implemented\n";
         $response->code(501);
         $response->message('Not Implemented');
     }
