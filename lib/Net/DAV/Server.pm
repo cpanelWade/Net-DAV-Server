@@ -226,6 +226,8 @@ sub lock {
     }
 
     my $token = $lock->token;
+    $response->code( 200 );
+    $response->message( 'OK' );
     $response->header( 'Lock-Token',   "<$token>" );
     $response->header( 'Content-Type', 'text/xml; charset="utf-8"' );
     $response->content(
