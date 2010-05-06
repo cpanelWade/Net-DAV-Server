@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 21;
+use Test::More tests => 24;
 use Carp;
 
 use strict;
@@ -37,6 +37,9 @@ use Net::DAV::LockManager::Simple ();
         }
         elsif ( $op eq 'd' ) {
             return exists $self->{$path} and 'd' eq $self->{$path};
+        }
+        elsif ( $op eq 'f' ) {
+            return exists $self->{$path} and 'f' eq $self->{$path};
         }
         else {
             die "Operation $op not implemented.";
@@ -99,6 +102,21 @@ use Net::DAV::LockManager::Simple ();
     my $resp = $dav->mkcol( $req, HTTP::Response->new() );
     is( $resp->code, 405, "$label: Response is failure" );
     ok( $fs->test( 'd', '/foo' ), "$label: target still exists" );
+}
+
+{
+    my $label = 'Create where file exists';
+    my $dav = Net::DAV::Server->new( -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = Mock::Filesys->new();
+    $dav->filesys( $fs );
+
+    ok( $fs->test( 'e', '/test.html' ), "$label: target does initially exist" );
+    my $req = HTTP::Request->new( MKCOL => '/test.html' );
+    $req->authorization_basic( 'fred', 'fredmobile' );
+
+    my $resp = $dav->mkcol( $req, HTTP::Response->new() );
+    is( $resp->code, 405, "$label: Response is failure" );
+    ok( $fs->test( 'f', '/test.html' ), "$label: target still exists" );
 }
 
 

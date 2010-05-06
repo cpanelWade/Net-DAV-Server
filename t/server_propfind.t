@@ -96,7 +96,7 @@ my $parser = XML::LibXML->new();
 # Directory
 {
     my $label = 'Depth 1 dir, default';
-    my $path = '/';
+    my $path = '/foo';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
     my $fs = $dav->filesys;
 
@@ -106,7 +106,7 @@ my $parser = XML::LibXML->new();
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
     my $xpc = get_xml_context( $resp->content );
-    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', "$path/", "$label: Path is correct" );
     has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
     has_nodes( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop[1]',
@@ -140,7 +140,7 @@ my $parser = XML::LibXML->new();
 
 {
     my $label = 'Depth 1 dir, allprop';
-    my $path = '/';
+    my $path = '/foo';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
     my $fs = $dav->filesys;
 
@@ -153,7 +153,7 @@ my $parser = XML::LibXML->new();
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
     my $xpc = get_xml_context( $resp->content );
-    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', "$path/", "$label: Path is correct" );
     has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
     has_nodes( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop[1]',
@@ -187,7 +187,7 @@ my $parser = XML::LibXML->new();
 
 {
     my $label = 'Directory, propname';
-    my $path = '/';
+    my $path = '/foo';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
     my $fs = $dav->filesys;
 
@@ -200,7 +200,7 @@ my $parser = XML::LibXML->new();
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
     my $xpc = get_xml_context( $resp->content );
-    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', "$path/", "$label: Path is correct" );
     has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
     has_nodes( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop[1]',
