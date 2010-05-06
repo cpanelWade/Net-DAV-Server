@@ -40,6 +40,7 @@ t/server_lock.t
 t/server_mkcol.t
 t/server_new.t
 t/server_options.t
+t/server_post.t
 t/server_propfind.t
 t/server_propfind_lock.t
 t/server_put.t
