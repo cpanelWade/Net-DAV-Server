@@ -678,7 +678,7 @@ sub has_nodes {
 }
 
 sub has_node {
-    my ($xpc, $xpath, $tag, $label) = @_;
+    my ($xpc, $xpath, $label) = @_;
     my @nodes = $xpc->findnodes( $xpath );
     ok ( defined $nodes[0], $label );
 }
