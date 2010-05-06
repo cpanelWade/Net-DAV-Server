@@ -416,7 +416,6 @@ sub post {
         return HTTP::Response->new( 403, 'Forbidden' );
     }
 
-    warn "POST not implemented\n";
     return HTTP::Response->new( 501, 'Not Implemented' );
 }
 
