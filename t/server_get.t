@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 7;
+use Test::More tests => 10;
 use Carp;
 
 use strict;
@@ -24,6 +24,7 @@ use Net::DAV::LockManager::Simple ();
             '/foo/index.html'   => [ 'f', 1, "This is an index\nThis is also an index\n" ],
             '/foo/test.html'    => [ 'f', 1, "This is a test\nThis is only a test file\n" ],
             '/foo/private.txt'  => [ 'f', 0, ],
+            '/foo/bar'          => [ 'd', 1, ],
         };
     }
     sub test {
@@ -109,10 +110,9 @@ use Net::DAV::LockManager::Simple ();
     my $resp = $dav->run( $req, HTTP::Response->new() );
     is( $resp->code, 200, "$label: found." );
 
-    my $cnt = grep { $resp->content =~ $_ }
-              map { qr{<a href="\Q$_\E">\Q$_\E</a>} }
-              ( 'index.html', 'test.html', 'private.txt' );
-    is( $cnt, 3, "$label: All list entries found." );
+    foreach my $f ( 'index.html', 'test.html', 'private.txt', 'bar/' ) {
+        like( $resp->content, qr{<a href="\Q$f\E">\Q$f\E</a>}, "$label: $f found" );
+    }
 }
 
 

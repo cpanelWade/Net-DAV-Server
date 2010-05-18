@@ -130,8 +130,9 @@ sub get {
         # a web browser, then
         my @files = $fs->list($path);
         my $body;
+        my $fpath = $path =~ m{/$} ? $path : $path . '/';
         foreach my $file (@files) {
-            if ( $fs->test( 'd', $path . $file ) ) {
+            if ( $fs->test( 'd', $fpath . $file ) ) {
                 $body .= qq|<a href="$file/">$file/</a><br>\n|;
             }
             else {
