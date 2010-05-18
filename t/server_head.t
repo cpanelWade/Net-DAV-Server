@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Carp;
 
 use strict;
@@ -31,13 +31,13 @@ use Net::DAV::LockManager::Simple ();
             return exists $self->{$path};
         }
         elsif ( $op eq 'd' ) {
-            return exists $self->{$path} and 'd' eq $self->{$path}->[0];
+            return exists $self->{$path} && 'd' eq $self->{$path}->[0];
         }
         elsif ( $op eq 'f' ) {
-            return exists $self->{$path} and 'f' eq $self->{$path}->[0];
+            return exists $self->{$path} && 'f' eq $self->{$path}->[0];
         }
         elsif ( $op eq 'r' ) {
-            return exists $self->{$path} and $self->{$path}->[1];
+            return exists $self->{$path} && $self->{$path}->[1];
         }
         else {
             die "Operation $op not implemented.";
@@ -68,6 +68,16 @@ use Net::DAV::LockManager::Simple ();
     my $resp = $dav->run( $req, HTTP::Response->new() );
     is( $resp->code, 200, "$label: found" );
     like( $resp->header( 'last_modified' ), qr/^\w+, \d+ \w+ \d+ [\d:]+ GMT/, "$label: modified time" );
+}
+
+{
+    my $label = 'Non-readable File';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $req = HTTP::Request->new( HEAD => '/foo/private.txt' );
+    $req->authorization_basic( 'fred', 'fredmobile' );
+
+    my $resp = $dav->run( $req, HTTP::Response->new() );
+    is( $resp->code, 404, "$label: not found." );
 }
 
 {

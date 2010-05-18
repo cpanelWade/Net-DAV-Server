@@ -36,7 +36,7 @@ use Net::DAV::LockManager::Simple ();
             return exists $self->{$path};
         }
         elsif ( $op eq 'd' ) {
-            return exists $self->{$path} and 'd' eq $self->{$path};
+            return exists $self->{$path} && 'd' eq $self->{$path};
         }
         else {
             die "Operation $op not implemented.";
