@@ -214,7 +214,7 @@ sub lock {
         return HTTP::Response->new( 412, 'Precondition Failed' ) unless $curr;
 
         # Not the correct lock token
-        return HTTP::Response->new( 412, 'Precondition Failed' ) if $lockreq->{'token'} ne $curr->token;
+        return HTTP::Response->new( 412, 'Precondition Failed' ) if $lockreq->{'token'}||'' ne $curr->token;
 
         # Resource is already locked
         return HTTP::Response->new( 403, 'Forbidden' );
