@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 41;
+use Test::More tests => 43;
 use Carp;
 
 use strict;
@@ -264,9 +264,27 @@ print STDERR $@ if $@;
     is( $resp->code, 400, "\t... with a 'Bad Request' status." );
 }
 
+{
+    my $label = 'Bad depth';
+    my $dav = Net::DAV::Server->new( -dbobj => Net::DAV::LockManager::Simple->new() );
+    $dav->filesys( Mock::Filesys->new() );
+    my $resource = '/directory/file';
+
+    my $req = lock_request( $resource,
+        { timeout=>'Infinite, Second-4100000000', depth => 3, scope=>'exclusive', owner_href=>'http://example.org/~gwj/contact.html'}
+    );
+    my $resp = eval { $dav->run( $req, HTTP::Response->new( 200 ) ); };
+print STDERR $@ if $@;
+    isa_ok( $resp, 'HTTP::Response', "$label: Lock returns response" );
+    is( $resp->code, 400, "\t... with a 'Bad Request' status." );
+}
+
 sub lock_request {
     my ($uri, $args) = @_;
-    my $req = HTTP::Request->new( 'LOCK' => $uri, (exists $args->{timeout}?[ 'Timeout' => $args->{timeout} ]:()) );
+    my $req = HTTP::Request->new( 'LOCK' => $uri,
+        [ (exists $args->{timeout}? ('Timeout' => $args->{timeout}) :()),
+        (exists $args->{depth}? ('Depth' => $args->{depth}) :()) ]
+    );
     $req->authorization_basic( 'fred', 'fredmobile' );
     if ( $args ) {
         my $scope = $args->{scope} || 'exclusive';
