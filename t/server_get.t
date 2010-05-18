@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 10;
+use Test::More tests => 13;
 use Carp;
 
 use strict;
@@ -115,4 +115,17 @@ use Net::DAV::LockManager::Simple ();
     }
 }
 
+{
+    my $label = 'Root Directory';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $req = HTTP::Request->new( GET => '/' );
+    $req->authorization_basic( 'fred', 'fredmobile' );
+
+    my $resp = $dav->run( $req, HTTP::Response->new() );
+    is( $resp->code, 200, "$label: found." );
+
+    foreach my $f ( 'index.html', 'foo/' ) {
+        like( $resp->content, qr{<a href="\Q$f\E">\Q$f\E</a>}, "$label: $f found" );
+    }
+}
 
