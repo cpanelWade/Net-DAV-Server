@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 43;
+use Test::More tests => 55;
 use Carp;
 
 use strict;
@@ -95,10 +95,62 @@ print STDERR $@ if $@;
     isa_ok( $resp, 'HTTP::Response', "$label: First lock returns response" );
     is( $resp->code, 200, "\t... with a 'Success' status." );
     my $token = $resp->header( 'Lock-Token' );
-    $req->header( 'If', '('.$resp->header( 'Lock-Token' ).')' );
+    $req->header( 'If', '('.$token.')' );
     $resp = eval { $dav->lock( $req, HTTP::Response->new( 200 ) ); };
     isa_ok( $resp, 'HTTP::Response', "$label: second lock return response" );
-    is( $resp->code, 403, "\t... with a 'Forbidden' error status." );
+    is( $resp->code, 412, "\t... with a 'Precondition failed' error status." );
+
+    $token =~ tr/<>//d;
+    $req = unlock_request( $resource, $token );
+    $resp = eval { $dav->unlock( $req, HTTP::Response->new( 200 ) ); };
+    isa_ok( $resp, 'HTTP::Response', "$label: unlock returns a response" );
+    is( $resp->code, 204, "\t... with a 'No Content' status" );
+}
+
+{
+    my $label = 'Double Lock w/o token';
+    my $dav = Net::DAV::Server->new( -dbobj => Net::DAV::LockManager::Simple->new() );
+    $dav->filesys( Mock::Filesys->new() );
+    my $resource = '/directory/file';
+
+    my $req = lock_request( $resource,
+        { timeout=>'Infinite, Second-4100000000', scope=>'exclusive', owner_href=>'http://example.org/~gwj/contact.html'}
+    );
+    my $resp = eval { $dav->lock( $req, HTTP::Response->new( 200 ) ); };
+print STDERR $@ if $@;
+    isa_ok( $resp, 'HTTP::Response', "$label: First lock returns response" );
+    is( $resp->code, 200, "\t... with a 'Success' status." );
+    my $token = $resp->header( 'Lock-Token' );
+    $resp = eval { $dav->lock( $req, HTTP::Response->new( 200 ) ); };
+    isa_ok( $resp, 'HTTP::Response', "$label: second lock return response" );
+    is( $resp->code, 412, "\t... with a 'Precondition failed' error status." );
+
+    $token =~ tr/<>//d;
+    $req = unlock_request( $resource, $token );
+    $resp = eval { $dav->unlock( $req, HTTP::Response->new( 200 ) ); };
+    isa_ok( $resp, 'HTTP::Response', "$label: unlock returns a response" );
+    is( $resp->code, 204, "\t... with a 'No Content' status" );
+}
+
+{
+    my $label = 'Double Lock w/ bad token';
+    my $dav = Net::DAV::Server->new( -dbobj => Net::DAV::LockManager::Simple->new() );
+    $dav->filesys( Mock::Filesys->new() );
+    my $resource = '/directory/file';
+
+    my $req = lock_request( $resource,
+        { timeout=>'Infinite, Second-4100000000', scope=>'exclusive', owner_href=>'http://example.org/~gwj/contact.html'}
+    );
+    my $resp = eval { $dav->lock( $req, HTTP::Response->new( 200 ) ); };
+print STDERR $@ if $@;
+    isa_ok( $resp, 'HTTP::Response', "$label: First lock returns response" );
+    is( $resp->code, 200, "\t... with a 'Success' status." );
+    my $token = $resp->header( 'Lock-Token' );
+    my $bad = substr( $token, 0, (length $token) - 2 ) . 'B>';
+    $req->header( 'If', '('.$bad.')' );
+    $resp = eval { $dav->lock( $req, HTTP::Response->new( 200 ) ); };
+    isa_ok( $resp, 'HTTP::Response', "$label: second lock return response" );
+    is( $resp->code, 412, "\t... with a 'Precondition failed' error status." );
 
     $token =~ tr/<>//d;
     $req = unlock_request( $resource, $token );
