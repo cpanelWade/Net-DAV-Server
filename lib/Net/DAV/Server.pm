@@ -71,7 +71,7 @@ sub run {
         $response->message('OK');
         eval {
             $response = $self->$method( $request, $response );
-            $response->header( 'Content-Length' => length( $response->content ) );
+            $response->header( 'Content-Length' => length( $response->content ) ) if defined $response->content;
             1;
         } or do {
             return HTTP::Response->new( 400, 'Bad Request' );
@@ -143,8 +143,7 @@ sub get {
         $response->content($body);
     }
     else {
-        $response->code(404);
-        $response->message('Not Found');
+        return HTTP::Response->new( 404, 'Not Found' );
     }
     return $response;
 }
