@@ -101,19 +101,14 @@ sub head {
     my $path = decode_utf8 uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
 
-    if ( $fs->test( "f", $path ) && $fs->test( "r", $path ) ) {
-        my $fh = $fs->open_read($path);
-        $fs->close_read($fh);
+    if ( $fs->test( 'f', $path ) && $fs->test( 'r', $path ) ) {
         $response->last_modified( $fs->modtime($path) );
     }
-    elsif ( $fs->test( "d", $path ) ) {
-
-        # a web browser, then
-        my @files = $fs->list($path);
+    elsif ( $fs->test( 'd', $path ) ) {
         $response->header( 'Content-Type' => 'text/html; charset="utf-8"' );
     }
     else {
-        $response = HTTP::Response->new( 404, "NOT FOUND", $response->headers );
+        $response = HTTP::Response->new( 404, 'NOT FOUND', $response->headers );
     }
     return $response;
 }
