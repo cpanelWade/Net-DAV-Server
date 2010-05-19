@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 55;
+use Test::More tests => 66;
 use Carp;
 
 use strict;
@@ -74,11 +74,63 @@ print STDERR $@ if $@;
     );
     my $token = $resp->header( 'Lock-Token' );
     $token =~ tr/<>//d;
+
     $req = unlock_request( $resource, $token );
     $resp = eval { $dav->unlock( $req, HTTP::Response->new( 200 ) ); };
 print STDERR $@ if $@;
     isa_ok( $resp, 'HTTP::Response', "$label: unlock returns a response" );
     is( $resp->code, 204, "\t... with a 'No Content' status" );
+}
+
+{
+    my $label = 'Simple Lock - bad unlock';
+    my $dav = Net::DAV::Server->new( -dbobj => Net::DAV::LockManager::Simple->new() );
+    $dav->filesys( Mock::Filesys->new() );
+    my $resource = '/directory/file';
+
+    my $req = lock_request( $resource,
+        { timeout=>'Infinite, Second-4100000000', scope=>'exclusive', owner_href=>'http://example.org/~gwj/contact.html'}
+    );
+    my $resp = eval { $dav->lock( $req, HTTP::Response->new( 200 ) ); };
+print STDERR $@ if $@;
+    isa_ok( $resp, 'HTTP::Response', "$label: Lock returns response" );
+    is( $resp->code, 200, "\t... with a 'Success' status." );
+    is_lock_response( $resp,
+        { path=>$resource, owner_href=> 'http://example.org/~gwj/contact.html', depth=> 'infinity', scope=>'exclusive'},
+        $label
+    );
+    my $token = $resp->header( 'Lock-Token' );
+    $token =~ tr/<>//d;
+    {
+        my $label = 'Simple Lock - missing token';
+        $req = unlock_request( $resource );
+        $resp = eval { $dav->unlock( $req, HTTP::Response->new( 200 ) ); };
+    print STDERR $@ if $@;
+        isa_ok( $resp, 'HTTP::Response', "$label: unlock returns a response" );
+        is( $resp->code, 400, "\t... with a 'Bad Request' status" );
+    }
+
+    {
+        my $label = 'Simple Lock - bad token';
+        my $bad = substr( $token, 0, (length $token) - 1 ) . 'B';
+        $req = unlock_request( $resource, $bad );
+        $resp = eval { $dav->unlock( $req, HTTP::Response->new( 200 ) ); };
+    print STDERR $@ if $@;
+        isa_ok( $resp, 'HTTP::Response', "$label: unlock returns a response" );
+        is( $resp->code, 403, "\t... with a 'Forbidden' status" );
+    }
+
+    $req = unlock_request( $resource, $token );
+    $resp = eval { $dav->unlock( $req, HTTP::Response->new( 200 ) ); };
+print STDERR $@ if $@;
+    isa_ok( $resp, 'HTTP::Response', "$label: unlock returns a response" );
+    is( $resp->code, 204, "\t... with a 'No Content' status" );
+
+    $req = unlock_request( $resource, $token );
+    $resp = eval { $dav->unlock( $req, HTTP::Response->new( 200 ) ); };
+print STDERR $@ if $@;
+    isa_ok( $resp, 'HTTP::Response', "$label: unlock returns a response" );
+    is( $resp->code, 409, "\t... with a 'Conflict' status" );
 }
 
 {
@@ -421,7 +473,7 @@ sub is_lock_response {
 
 sub unlock_request {
     my ($uri, $token) = @_;
-    my $req = HTTP::Request->new( 'UNLOCK' => $uri, [ 'Lock-Token' => "<$token>" ] );
+    my $req = HTTP::Request->new( 'UNLOCK' => $uri, ($token?[ 'Lock-Token' => "<$token>" ]:()) );
     $req->authorization_basic( 'fred', 'fredmobile' );
     return $req;
 }
