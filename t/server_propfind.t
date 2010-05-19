@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 103;
+use Test::More tests => 106;
 use Carp;
 
 use strict;
@@ -330,6 +330,26 @@ my $parser = XML::LibXML->new();
     has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop[1]/D:lockdiscovery',
+        "$label: Property exists"
+    );
+}
+
+{
+    my $label = 'Directory, different namespace';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:" xmlns:G="GWJ:"><D:prop><G:weirdprop/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    $xpc->registerNs( 'i0', 'GWJ:' ); 
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 404 Not Found', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/i0:weirdprop',
         "$label: Property exists"
     );
 }
