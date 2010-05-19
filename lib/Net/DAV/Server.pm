@@ -460,13 +460,12 @@ sub delete {
         return HTTP::Response->new( 403, 'Forbidden' );
     }
 
-    my $path = decode_utf8 uri_unescape $request->uri->path;
-    my $fs   = $self->filesys;
-
     if ( $request->uri->fragment ) {
         return HTTP::Response->new( 404, 'Not Found', $response->headers );
     }
 
+    my $path = decode_utf8 uri_unescape $request->uri->path;
+    my $fs   = $self->filesys;
     unless ( $fs->test( 'e', $path ) ) {
         return HTTP::Response->new( 404, 'Not Found', $response->headers );
     }

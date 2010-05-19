@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More !eval { use IO::Scalar; 1 } ? (skip_all => 'IO::Scalar not available') : (tests => 20);
+use Test::More !eval { use IO::Scalar; 1 } ? (skip_all => 'IO::Scalar not available') : (tests => 21);
 use Carp;
 
 use strict;
@@ -115,6 +115,18 @@ my $parser = XML::LibXML->new();
     my $resp = $dav->delete( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 404, "$label: Response is 'Not Found'" );
     ok( !$fs->test( 'f', $path ), "$label: target no long exists" );
+}
+
+{
+    my $label = 'Fragment';
+    my $path = '/fred.txt#top';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+    my $fs = $dav->filesys;
+
+    my $req = delete_request( $path );
+
+    my $resp = $dav->delete( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 404, "$label: Response is 'Not Found'" );
 }
 
 {
