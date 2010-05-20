@@ -15,7 +15,6 @@ MANIFEST.SKIP
 META.yml
 README
 t/base_new.t
-t/base_options.t
 t/lock_object.t
 t/lockmanager__validate_path.t
 t/lockmanager_backends.t
@@ -48,5 +47,4 @@ t/server_propfind_lock.t
 t/server_put.t
 t/server_run.t
 t/uuid.t
-TODO
 TODO.textile
