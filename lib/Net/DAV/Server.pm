@@ -16,7 +16,8 @@ use Net::DAV::LockManager ();
 use Net::DAV::LockManager::DB ();
 use base 'Class::Accessor::Fast';
 __PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.30';
+our $VERSION = '1.30_01';
+$VERSION = eval $VERSION;  # convert development version into a simpler version number.
 
 our %implemented = (
     options  => 1,
