@@ -14,9 +14,8 @@ use URI::Escape;
 use XML::LibXML;
 use Net::DAV::LockManager ();
 use Net::DAV::LockManager::DB ();
-use base 'Class::Accessor::Fast';
-__PACKAGE__->mk_accessors(qw(filesys));
-our $VERSION = '1.30_01';
+
+our $VERSION = '1.300_01';
 $VERSION = eval $VERSION;  # convert development version into a simpler version number.
 
 our %implemented = (
@@ -52,6 +51,12 @@ sub new {
         $self->filesys( $args{'-filesys'} );
     }
     return $self;
+}
+
+sub filesys {
+    my ($self, $nfs) = @_;
+    $self->{'-filesys'} = $nfs if defined $nfs;
+    return $self->{'-filesys'};
 }
 
 sub run {
@@ -925,8 +930,8 @@ Development code at http://svn.brong.net/netdavserver/trunk
 
 =head1 COPYRIGHT
 
-
 Copyright (C) 2004, Leon Brocard
+Changes copyright (c) 2010, cPanel, Inc.
 
 This module is free software; you can redistribute it or modify it under
 the same terms as Perl itself.

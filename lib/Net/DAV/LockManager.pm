@@ -7,6 +7,9 @@ use File::Spec ();
 use Net::DAV::UUID;
 use Net::DAV::Lock;
 
+our $VERSION = '1.300_01';
+$VERSION = eval $VERSION;
+
 sub new {
     my ($class, $db) = (shift, shift);
     my %obj = @_;

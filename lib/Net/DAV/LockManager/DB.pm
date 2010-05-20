@@ -6,6 +6,9 @@ use DBI;
 use File::Temp qw(tmpnam);
 use Net::DAV::Lock;
 
+our $VERSION = '1.300_01';
+$VERSION = eval $VERSION;
+
 #
 # This provides a listing of all database schema required to initialize
 # a database from an empty state.  Note that this is an array, as each

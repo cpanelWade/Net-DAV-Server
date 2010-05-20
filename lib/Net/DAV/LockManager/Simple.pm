@@ -4,6 +4,9 @@ use Net::DAV::Lock;
 
 use strict;
 
+our $VERSION = '1.300_01';
+$VERSION = eval $VERSION;
+
 #
 # This reference implementation of the lock management database interface
 # provides an example of the simplest case of a pluggable lock management
