@@ -9,7 +9,7 @@ WriteMakefile
           'PREREQ_PM' => {
                            'URI' => 0,
                            'URI::Escape' => 0,
-                           'Class::Accessor::Fast' => 0,
+                           'Digest::SHA1' => 0,
                            'HTTP::Date' => 0,
                            'Encode' => 0,
                            'Test::More' => 0,
