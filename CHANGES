@@ -1,5 +1,7 @@
 CHANGES file for Net::DAV::Server
 
+1.300_03 Wed May 26 20:00:00 CST 2010
+  - Fix dependency problem cause a linux/Perl 5.8.8 failure.
 1.300_02 Fri May 21 23:15:00 CST 2010
   - Fix dependency problem cause solaris/Perl 5.12 failure.
 1.300_01 Thu May 20 10:00:00 CST 2010

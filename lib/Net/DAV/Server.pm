@@ -12,10 +12,11 @@ use File::Spec;
 use URI;
 use URI::Escape;
 use XML::LibXML;
+use XML::LibXML::XPathContext;
 use Net::DAV::LockManager ();
 use Net::DAV::LockManager::DB ();
 
-our $VERSION = '1.300_02';
+our $VERSION = '1.300_03';
 $VERSION = eval $VERSION;  # convert development version into a simpler version number.
 
 our %implemented = (

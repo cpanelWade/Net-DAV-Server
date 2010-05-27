@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 
-use Test::More tests => 13;
+use Test::More;
+eval "use IO::Scalar";
+plan $@ ? (skip_all => 'IO::Scalar not available') : (tests => 13);
 use Carp;
 
 use strict;
 use warnings;
-
-use IO::Scalar;
 
 use HTTP::Request;
 use HTTP::Response;

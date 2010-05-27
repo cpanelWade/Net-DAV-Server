@@ -10,10 +10,6 @@ use HTTP::Request;
 use HTTP::Response;
 use XML::LibXML;
 
-use FindBin;
-use lib "$FindBin::Bin/..";
-use lib "/usr/local/cpanel";
-
 use Net::DAV::Server ();
 use Net::DAV::LockManager::Simple ();
 
