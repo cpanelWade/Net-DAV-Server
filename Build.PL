@@ -22,7 +22,7 @@ my $build = Module::Build->new(
         'Test::More' => 0,
         'URI' => 0,
         'URI::Escape' => 0,
-        'XML::LibXML' => 0,
+        'XML::LibXML' => 1.62,
     },
     build_requires => {
         'IO::Scalar' => 0,
