@@ -1,5 +1,8 @@
 CHANGES file for Net::DAV::Server
 
+1.300_04 Tue Jun 1 12:00:00 CST 2010
+  - Set XML::LibXML dependency to fix yet another dependency issue causing
+    CPANTS failures.
 1.300_03 Wed May 26 20:00:00 CST 2010
   - Fix dependency problem cause a linux/Perl 5.8.8 failure.
 1.300_02 Fri May 21 23:15:00 CST 2010

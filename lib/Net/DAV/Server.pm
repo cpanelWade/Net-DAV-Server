@@ -16,7 +16,7 @@ use XML::LibXML::XPathContext;
 use Net::DAV::LockManager ();
 use Net::DAV::LockManager::DB ();
 
-our $VERSION = '1.300_03';
+our $VERSION = '1.300_04';
 $VERSION = eval $VERSION;  # convert development version into a simpler version number.
 
 our %implemented = (
