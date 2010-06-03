@@ -16,7 +16,7 @@ use XML::LibXML::XPathContext;
 use Net::DAV::LockManager ();
 use Net::DAV::LockManager::DB ();
 
-our $VERSION = '1.300_04';
+our $VERSION = '1.300_05';
 $VERSION = eval $VERSION;  # convert development version into a simpler version number.
 
 our %implemented = (
@@ -751,11 +751,11 @@ sub propfind {
 
         my $is_dir = $fs->test( 'd', $path );
         my $resp = _dav_child( $multistat, 'response' );
-        _dav_child( $resp, 'href',
-            File::Spec->catdir(
+        my $href = File::Spec->catdir(
                 map { uri_escape encode_utf8 $_} File::Spec->splitdir($path)
             ) . ( $is_dir && $path !~ m{/$} ? '/' : '')
-        );
+        $href =~ tr{\\}{/};  # Protection from wrong slashes under Windows.
+        _dav_child( $resp, 'href', $href );
         my $okprops = $doc->createElement('D:prop');
         my $nfprops = $doc->createElement('D:prop');
         my $prop;

@@ -1,5 +1,7 @@
 CHANGES file for Net::DAV::Server
 
+1.300_05 Thu Jun 3 12:00:00 CST 2010
+  - Correct path separators in propfind under Windows.
 1.300_04 Tue Jun 1 12:00:00 CST 2010
   - Set XML::LibXML dependency to fix yet another dependency issue causing
     CPANTS failures.
