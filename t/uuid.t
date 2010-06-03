@@ -16,4 +16,4 @@ my %uuids = ();
 
 $uuids{Net::DAV::UUID::generate("/foo/bar/baz", "tom")} = 1 foreach (1..10000);
 
-ok(scalar keys %uuids == 10000, "UUID generator produced 10000 unique identifiers");
+is( (scalar keys %uuids), 10000, "UUID generator produced 10000 unique identifiers");
