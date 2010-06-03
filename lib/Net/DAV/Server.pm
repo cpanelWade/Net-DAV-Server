@@ -753,7 +753,7 @@ sub propfind {
         my $resp = _dav_child( $multistat, 'response' );
         my $href = File::Spec->catdir(
                 map { uri_escape encode_utf8 $_} File::Spec->splitdir($path)
-            ) . ( $is_dir && $path !~ m{/$} ? '/' : '')
+            ) . ( $is_dir && $path !~ m{/$} ? '/' : '');
         $href =~ tr{\\}{/};  # Protection from wrong slashes under Windows.
         _dav_child( $resp, 'href', $href );
         my $okprops = $doc->createElement('D:prop');
