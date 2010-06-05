@@ -2,10 +2,12 @@ package Net::DAV::UUID;
 
 use strict;
 
-our $VERSION = '1.300_01';
+our $VERSION = '1.300_05';
 $VERSION = eval $VERSION;  # convert development version into a simpler version number.
 
 use Digest::SHA1 qw(sha1);
+
+my $counter = 0;
 
 #
 # Given a WebDAV resource path and lock requestor/owner, generate
@@ -20,7 +22,7 @@ use Digest::SHA1 qw(sha1);
 # this package synchronize upon usages of this method.
 #
 sub generate {
-    return join '-', unpack('H8 H4 H4 H4 H12', sha1(shift() . shift() . time() . rand() . $< . $$));
+    return join '-', unpack('H8 H4 H4 H4 H12', sha1( join( ':', @_[0,1], time, rand, $<, $$, ++$counter ) ));
 }
 
 1;
