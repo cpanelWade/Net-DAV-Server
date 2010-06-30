@@ -1,8 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More;
-eval "use IO::Scalar";
-plan $@ ? (skip_all => 'IO::Scalar not available') : (tests => 21);
+use Test::More tests => 21;
 use Carp;
 
 use strict;
