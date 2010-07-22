@@ -37,4 +37,3 @@ h3. Other goals
 * Full litmus test complience
 * Quota/"disk free" support (both Mac 512byte and standards-compliant)
 * Revisit owner/creater validation, this had to be opened up for cpdavd.
-** Bogus change to test change review.
