@@ -36,3 +36,4 @@ h3. Other goals
 * Avoid buffering entire files in memory
 * Full litmus test complience
 * Quota/"disk free" support (both Mac 512byte and standards-compliant)
+* Revisit owner/creater validation, this had to be opened up for cpdavd.
