@@ -53,6 +53,16 @@ sub rmdir {
     delete $self->{'fs'}->{$path};
     return 1;
 }
+sub mkdir {
+    my ($self, $path) = @_;
+    return 0 if $self->test( 'e', $path );
+    my $parent = $path;
+    $parent =~ s{/$}{};
+    $parent =~ s{/[^/]+$}{};
+    return 0 unless !$parent || $self->test( 'd', $parent );
+    $self->{'fs'}->{$path} = 'd';
+    return 1;
+}
 sub cwd {
     my ($self) = @_;
     return defined $self->{'cwd'} ? $self->{'cwd'} : '/';
