@@ -9,12 +9,9 @@ use warnings;
 use HTTP::Request;
 use HTTP::Response;
 
-{
-    package Mock::FileSystem::Locking;
-    sub new { return bless {}; }
-    sub lock {}
-    sub unlock {}
-}
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use Mock::Filesys;
 
 use Net::DAV::Server ();
 
@@ -33,15 +30,15 @@ use Net::DAV::Server ();
 
 {
     my $dav = Net::DAV::Server->new();
-    $dav->filesys( Mock::FileSystem::Locking->new() );
+    $dav->filesys( Mock::Filesys->new() );
     my $res = $dav->options( HTTP::Request->new(), HTTP::Response->new( 200 ) );
     isa_ok( $res, 'HTTP::Response' );
-    isa_ok( $dav->filesys, 'Mock::FileSystem::Locking' );
-    is( $res->header('MS-Author-Via'), 'DAV', 'Locking FS: Microsoft author header' );
-    is( $res->header( 'DAV' ), '1,2,<http://apache.org/dav/propset/fs/1>', 'Locking FS: Capability header is correct.' );
+    isa_ok( $dav->filesys, 'Mock::Filesys' );
+    is( $res->header('MS-Author-Via'), 'DAV', 'FS: Microsoft author header' );
+    is( $res->header( 'DAV' ), '1,2,<http://apache.org/dav/propset/fs/1>', 'FS: Capability header is correct.' );
     is_deeply(
         [ sort split /,\s*/, $res->header('Allow') ],
         [ qw/COPY DELETE GET HEAD LOCK MKCOL MOVE OPTIONS POST PROPFIND PUT UNLOCK/ ],
-        'Locking FS: Expected methods are allowed.'
+        'FS: Expected methods are allowed.'
     );
 }
