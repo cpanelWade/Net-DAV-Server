@@ -15,48 +15,9 @@ use XML::LibXML::XPathContext;
 
 my $parser = XML::LibXML->new();
 
-{
-    package Mock::Filesys;
-    sub new {
-        return bless {
-            fs => {
-                '/' =>               'd',
-                '/foo' =>            'd',
-                '/foo/bar' =>        'd',
-                '/test.html' =>      'f',
-            }
-        };
-    }
-    sub test {
-        my ($self, $op, $path) = @_;
-
-        if ( $op eq 'e' ) {
-            return exists $self->{'fs'}->{$path};
-        }
-        elsif ( $op eq 'd' ) {
-            return unless exists $self->{'fs'}->{$path};
-            return $self->{'fs'}->{$path} eq 'd';
-        }
-        elsif ( $op eq 'f' ) {
-            return unless exists $self->{'fs'}->{$path};
-            return $self->{'fs'}->{$path} eq 'f';
-        }
-        else {
-            die "Operation $op not implemented.";
-        }
-    }
-    sub open_write {
-        my ($self, $path) = @_;
-        return if $path eq '/no_open';
-        $self->{'fh'} = IO::Scalar->new();
-        $self->{'fs'}->{$path} = 'f';
-        return $self->{'fh'};
-    }
-    sub close_write {
-        my ($self, $fh) = @_;
-        close( $fh );
-    }
-}
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use Mock::Filesys;
 
 {
     my $label = 'Simple file create';

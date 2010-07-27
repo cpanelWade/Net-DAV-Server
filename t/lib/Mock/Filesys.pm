@@ -3,6 +3,10 @@ package Mock::Filesys;
 use warnings;
 use strict;
 use Carp;
+my $has_io_scalar;
+BEGIN {
+    $has_io_scalar = do { eval "use IO::Scalar"; 1; };
+}
 
 sub new {
     return bless {
@@ -101,6 +105,23 @@ sub list {
     return;
 }
 
+sub open_write {
+    my ($self, $path) = @_;
+    return if $path eq '/no_open';
+    $self->{'fs'}->{$path} = 'f';
+    if( $has_io_scalar ) {
+        $self->{'fh'} = IO::Scalar->new();
+        return $self->{'fh'};
+    }
+    return 1;
+}
+sub close_write {
+    my ($self, $fh) = @_;
+    if( $has_io_scalar ) {
+        return close( $fh );
+    }
+    return 1;
+}
 
 1; # Magic true value required at end of module
 
