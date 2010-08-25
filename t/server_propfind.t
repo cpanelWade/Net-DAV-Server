@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 106;
+use Test::More tests => 107;
 use Carp;
 
 use strict;
@@ -221,6 +221,7 @@ my $parser = XML::LibXML->new();
     my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
     is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
     my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:href', $path, "$label: Path is correct" );
     has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop[1]/D:creationdate',
