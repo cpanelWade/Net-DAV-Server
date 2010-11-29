@@ -32,6 +32,7 @@ t/lockmanager_refresh_lock_invalid.t
 t/lockmanager_simple.t
 t/lockmanager_unlock.t
 t/lockmanager_unlock_invalid.t
+t/lib/Mock/Filesys.pm
 t/pod.t
 t/server_delete.t
 t/server_extract_lock_token.t
