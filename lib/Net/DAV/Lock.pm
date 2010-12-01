@@ -7,7 +7,7 @@ our $DEFAULT_LOCK_TIMEOUT    = $MAX_LOCK_TIMEOUT;
 our $DEFAULT_DEPTH           = 'infinity'; # as per RFC 4918, section 9.10.3, paragraph 5
 our $DEFAULT_SCOPE           = 'exclusive';
 
-our $VERSION = '1.301';
+our $VERSION = '1.302';
 $VERSION = eval $VERSION;
 
 sub new {
