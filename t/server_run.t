@@ -8,13 +8,12 @@ use warnings;
 
 use Net::DAV::Server ();
 
-{
-    package Mock::FileSystem;
-    sub new { return bless {}; }
-}
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use Mock::Filesys;
 
 {
-    my $dav = Net::DAV::Server->new( -filesys => Mock::FileSystem->new() );
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new() );
     my $res = $dav->run( HTTP::Request->new( OPTIONS => '/' ) );
     isa_ok( $res, 'HTTP::Response' );
     is( $res->header('MS-Author-Via'), 'DAV', 'No FS: Microsoft author header' );
@@ -33,7 +32,7 @@ use Net::DAV::Server ();
 }
 
 {
-    my $dav = Net::DAV::Server->new( -filesys => Mock::FileSystem->new() );
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new() );
     my $res = $dav->run( HTTP::Request->new( XYZZY => '/' ) );
     isa_ok( $res, 'HTTP::Response' );
     is( $res->code, 501, 'Bad method => "not implemented"' );

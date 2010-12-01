@@ -12,27 +12,9 @@ use HTTP::Response;
 use Net::DAV::Server ();
 use Net::DAV::LockManager::Simple ();
 
-{
-    package Mock::Filesys;
-    sub new {
-        return bless {
-            '/' => 'd',
-        };
-    }
-    sub test {
-        my ($self, $op, $path) = @_;
-
-        if ( $op eq 'e' ) {
-            return exists $self->{$path};
-        }
-        elsif ( $op eq 'd' ) {
-            return exists $self->{$path} && 'd' eq $self->{$path};
-        }
-        else {
-            die "Operation $op not implemented.";
-        }
-    }
-}
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use Mock::Filesys;
 
 {
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );

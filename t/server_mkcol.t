@@ -13,46 +13,9 @@ use XML::LibXML;
 use Net::DAV::Server ();
 use Net::DAV::LockManager::Simple ();
 
-{
-    package Mock::Filesys;
-    sub new {
-        return bless {
-            '/' => 'd',
-            '/foo' => 'd',
-            '/foo/bar' => 'd',
-            '/test.html' => 'f',
-            '/foo/index.html' => 'f',
-            '/bar' => 'd',
-        };
-    }
-    sub test {
-        my ($self, $op, $path) = @_;
-
-        if ( $op eq 'e' ) {
-            return exists $self->{$path};
-        }
-        elsif ( $op eq 'd' ) {
-            return exists $self->{$path} && 'd' eq $self->{$path};
-        }
-        elsif ( $op eq 'f' ) {
-            return exists $self->{$path} && 'f' eq $self->{$path};
-        }
-        else {
-            die "Operation $op not implemented.";
-        }
-    }
-
-    sub mkdir {
-        my ($self, $path) = @_;
-        return 0 if $self->test( 'e', $path );
-        my $parent = $path;
-        $parent =~ s{/$}{};
-        $parent =~ s{/[^/]+$}{};
-        return 0 unless !$parent || $self->test( 'd', $parent );
-        $self->{$path} = 'd';
-        return 1;
-    }
-}
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use Mock::Filesys;
 
 {
     my $label = 'Simple MKCOL';

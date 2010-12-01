@@ -13,43 +13,9 @@ use XML::LibXML;
 use Net::DAV::Server ();
 use Net::DAV::LockManager::Simple ();
 
-{
-    package Mock::Filesys;
-    sub new {
-        return bless {
-            '/' => 'd',
-            '/foo' => 'd',
-            '/foo/bar' => 'd',
-            '/test.html' => 'f',
-            '/foo/index.html' => 'f',
-            '/bar' => 'd',
-        };
-    }
-    sub test {
-        my ($self, $op, $path) = @_;
-
-        if ( $op eq 'e' ) {
-            return exists $self->{$path};
-        }
-        elsif ( $op eq 'd' ) {
-            return exists $self->{$path} && 'd' eq $self->{$path};
-        }
-        else {
-            die "Operation $op not implemented.";
-        }
-    }
-
-    sub open_write {
-        my ($self, $path) = @_;
-        $self->{$path} = 'f';
-        return 1;
-    }
-
-    sub close_write {
-        my ($self, $path) = @_;
-        return 1;
-    }
-}
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use Mock::Filesys;
 
 {
     my $label = 'Simple Exclusive Lock';

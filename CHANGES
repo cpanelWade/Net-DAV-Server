@@ -1,5 +1,7 @@
 CHANGES file for Net::DAV::Server
 
+1.301 Mon Nov 29 11:00:00 CST 2010
+  - Release version incorporating recent development changes.
 1.300_05 Sat Jun 5 12:10:00 CST 2010
   - Correct path separators in propfind under Windows.
   - Modify UUID to be more resistant to bad rand() function under Windows.
