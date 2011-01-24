@@ -2,6 +2,8 @@ CHANGES file for Net::DAV::Server
 
 ????
   - Allow domain names that start with a digit in virtual user names.
+1.302 Tue Nov 30 23:40:00 CST 2010
+  - Remove unexpected IO::Scalar dependency in test.
 1.301 Mon Nov 29 11:00:00 CST 2010
   - Release version incorporating recent development changes.
 1.300_05 Sat Jun 5 12:10:00 CST 2010
