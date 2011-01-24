@@ -217,7 +217,7 @@ sub _validate_lock_request {
 
     die "Not a clean path\n" if $req->{'path'} =~ m{(?:^|/)\.\.?(?:$|/)};
     die "Not a clean path\n" if $req->{'path'} !~ m{^/} && !($req->{'path'} =~ s{^https?://[^/]+/}{/});
-    if( defined $req->{'user'} && $req->{'user'} !~ m{^[a-z_.][-a-z0-9_.]*$}i ) {
+    if( defined $req->{'user'} && $req->{'user'} !~ m{^[0-9a-z_.][-a-z0-9_.]*$}i ) {
         die "Not a valid user name.\n";  # May need better validation.
     }
 
@@ -249,7 +249,7 @@ sub _validate_lock_request {
 1;
 
 __END__
-Copyright (c) 2010, cPanel, Inc. All rights reserved.
+Copyright (c) 2011, cPanel, Inc. All rights reserved.
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
 
