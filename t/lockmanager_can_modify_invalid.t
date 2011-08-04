@@ -33,7 +33,7 @@ use Net::DAV::LockManager::Simple ();
     # Owner checking
     my $db = Net::DAV::LockManager::Simple->new();
     my $mgr = Net::DAV::LockManager->new($db);
-    foreach my $user ( '', qw{aa()bb /fred/ ab+cd 1fred} ) {
+    foreach my $user ( '', qw{aa()bb /fred/ ab+cd $fred} ) {
         did_die( sub { $mgr->can_modify({ 'path' => '/fred/foo', 'user'=>$user }) }, qr/Not a valid user/, "$user Not an allowed user" );
     }
 }
