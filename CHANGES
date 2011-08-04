@@ -1,7 +1,8 @@
 CHANGES file for Net::DAV::Server
 
-????
+1.303 Thu Aug 4 14:00:00 CDT 2011
   - Allow domain names that start with a digit in virtual user names.
+  - Remove UTF8 decode/encode calls that were messing up actual utf8 strings.
 1.302 Tue Nov 30 23:40:00 CST 2010
   - Remove unexpected IO::Scalar dependency in test.
 1.301 Mon Nov 29 11:00:00 CST 2010

@@ -5,7 +5,7 @@ Net::DAV::LockManager - Provides support for WebDAV locking
 
 =head1 VERSION
 
-This document describes Net::DAV::LockManager version 1.302.
+This document describes Net::DAV::LockManager version 1.303.
 
 
 =head1 SYNOPSIS

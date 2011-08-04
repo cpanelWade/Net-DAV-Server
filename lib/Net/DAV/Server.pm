@@ -16,7 +16,7 @@ use XML::LibXML::XPathContext;
 use Net::DAV::LockManager ();
 use Net::DAV::LockManager::DB ();
 
-our $VERSION = '1.302';
+our $VERSION = '1.303';
 $VERSION = eval $VERSION;  # convert development version into a simpler version number.
 
 our %implemented = (
@@ -66,7 +66,7 @@ sub run {
     my $fs = $self->filesys || die 'Filesys missing';
 
     my $method = $request->method;
-    my $path   = decode_utf8 uri_unescape $request->uri->path;
+    my $path   = uri_unescape $request->uri->path;
 
     if ( !defined $response ) {
         $response = HTTP::Response->new;
@@ -105,7 +105,7 @@ sub options {
 
 sub head {
     my ( $self, $request, $response ) = @_;
-    my $path = decode_utf8 uri_unescape $request->uri->path;
+    my $path = uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
 
     if ( $fs->test( 'f', $path ) && $fs->test( 'r', $path ) ) {
@@ -122,7 +122,7 @@ sub head {
 
 sub get {
     my ( $self, $request, $response ) = @_;
-    my $path = decode_utf8 uri_unescape $request->uri->path;
+    my $path = uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
 
     if ( $fs->test( 'f', $path ) && $fs->test( 'r', $path ) ) {
@@ -272,7 +272,7 @@ sub _parse_lock_header {
     my ($req)   = @_;
     my $depth   = $req->header('Depth');
     my %lockreq = (
-        'path' => decode_utf8( URI::Escape::uri_unescape( $req->uri->path ) ),
+        'path' => uri_unescape( $req->uri->path ),
 
         # Assuming basic auth for now.
         'user' => ( $req->authorization_basic() )[0] || '',
@@ -370,7 +370,7 @@ sub _active_lock_prop {
 
 sub unlock {
     my ( $self, $request, $response ) = @_;
-    my $path    = decode_utf8( URI::Escape::uri_unescape( $request->uri->path ) );
+    my $path    = uri_unescape( $request->uri->path );
     my $lockreq = _parse_lock_header($request);
 
     # No lock token supplied, we cannot unlock
@@ -428,7 +428,7 @@ sub put {
         return HTTP::Response->new( 403, 'Forbidden' );
     }
 
-    my $path = decode_utf8 uri_unescape $request->uri->path;
+    my $path = uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
 
     return HTTP::Response->new( 405, 'Method Not Allowed' ) if $fs->test( 'd', $path );
@@ -471,7 +471,7 @@ sub delete {
         return HTTP::Response->new( 404, 'Not Found', $response->headers );
     }
 
-    my $path = decode_utf8 uri_unescape $request->uri->path;
+    my $path = uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
     unless ( $fs->test( 'e', $path ) ) {
         return HTTP::Response->new( 404, 'Not Found', $response->headers );
@@ -514,11 +514,11 @@ sub delete {
 
 sub copy {
     my ( $self, $request, $response ) = @_;
-    my $path = decode_utf8 uri_unescape $request->uri->path;
+    my $path = uri_unescape $request->uri->path;
 
     # need to modify request to pay attention to destination address.
     my $lockreq = _parse_lock_header( $request );
-    $lockreq->{'path'} = decode_utf8( URI::Escape::uri_unescape( $request->header( 'Destination' ) ) );
+    $lockreq->{'path'} = uri_unescape( $request->header( 'Destination' ) );
     if ( !$self->_lock_manager()->can_modify( $lockreq ) ) {
         return HTTP::Response->new( 403, 'Forbidden' );
     }
@@ -586,7 +586,7 @@ sub copy {
 
 sub _copy_file {
     my ( $self, $request, $response ) = @_;
-    my $path = decode_utf8 uri_unescape $request->uri->path;
+    my $path = uri_unescape $request->uri->path;
     my $fs   = $self->filesys;
 
     my $destination = $request->header('Destination');
@@ -636,7 +636,7 @@ sub move {
     if ( !$self->_lock_manager()->can_modify( $lockreq ) ) {
         return HTTP::Response->new( 403, 'Forbidden' );
     }
-    $lockreq->{'path'} = decode_utf8( URI::Escape::uri_unescape( $request->header( 'Destination' ) ) );
+    $lockreq->{'path'} = uri_unescape( $request->header( 'Destination' ) );
     if ( !$self->_lock_manager()->can_modify( $lockreq ) ) {
         return HTTP::Response->new( 403, 'Forbidden' );
     }
@@ -656,7 +656,7 @@ sub move {
 
 sub mkcol {
     my ( $self, $request, $response ) = @_;
-    my $path = decode_utf8 uri_unescape $request->uri->path;
+    my $path = uri_unescape $request->uri->path;
 
     if ( !$self->_can_modify($request) ) {
         return HTTP::Response->new( 403, 'Forbidden' );

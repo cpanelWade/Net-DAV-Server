@@ -6,7 +6,7 @@ use DBI;
 use File::Temp qw(tmpnam);
 use Net::DAV::Lock;
 
-our $VERSION = '1.302';
+our $VERSION = '1.303';
 $VERSION = eval $VERSION;
 
 #
