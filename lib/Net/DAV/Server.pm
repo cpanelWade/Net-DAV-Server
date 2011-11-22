@@ -792,6 +792,16 @@ sub propfind {
                         $prop->addChild( $active );
                     }
                 }
+                elsif ( $ns eq 'DAV:' && $name eq 'supportedlock' ) {
+                    $prop = _dav_child( $okprops, 'supportedlock' );
+                    #for my $n (qw(exclusive shared)) {  # shared is currently not supported.
+                    for my $n (qw(exclusive)) {
+                        my $lock = _dav_child( $prop, 'lockentry' );
+
+                        _dav_child( _dav_child( $lock, 'lockscope' ), $n );
+                        _dav_child( _dav_child( $lock, 'locktype' ), 'write' );
+                    }
+                }
                 else {
                     my $prefix = $prefixes{$ns};
                     if ( !defined $prefix ) {

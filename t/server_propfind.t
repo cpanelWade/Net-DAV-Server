@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::More tests => 119;
+use Test::More tests => 133;
 use Carp;
 
 use strict;
@@ -129,7 +129,11 @@ my $parser = XML::LibXML->new();
     );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
-        "$label: supported scopes"
+        "$label: supports exclusive lock scope"
+    );
+    hasnt_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:shared',
+        "$label: shared lock scope not supported"
     );
     has_text( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
@@ -176,7 +180,11 @@ my $parser = XML::LibXML->new();
     );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
-        "$label: supported scopes"
+        "$label: supports exclusive lock scope"
+    );
+    hasnt_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:shared',
+        "$label: shared lock scope not supported"
     );
     has_text( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
@@ -345,6 +353,33 @@ my $parser = XML::LibXML->new();
 }
 
 {
+    my $label = 'Directory, supportedlock';
+    my $path = '/';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:supportedlock/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:supportedlock',
+        "$label: Property exists"
+    );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop[1]/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
+        "$label: supports exclusive lock scope"
+    );
+    hasnt_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:shared',
+        "$label: shared lock scope not supported"
+    );
+}
+
+{
     my $label = 'Directory, different namespace';
     my $path = '/';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
@@ -407,7 +442,11 @@ my $parser = XML::LibXML->new();
     );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
-        "$label: supported scopes"
+        "$label: supports exclusive lock scope"
+    );
+    hasnt_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:shared',
+        "$label: shared lock scope not supported"
     );
     has_text( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
@@ -455,7 +494,11 @@ my $parser = XML::LibXML->new();
     );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
-        "$label: supported scopes"
+        "$label: missing exclusive lock scope"
+    );
+    hasnt_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:shared',
+        "$label: shared lock scope not supported"
     );
     has_text( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
@@ -629,6 +672,29 @@ my $parser = XML::LibXML->new();
 }
 
 {
+    my $label = 'File, supportedlock';
+    my $path = '/test.html';
+    my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
+
+    my $req = propfind_request(
+        $path,
+        '<D:propfind xmlns:D="DAV:"><D:prop><D:supportedlock/></D:prop></D:propfind>'
+    );
+    my $resp = $dav->propfind( $req, HTTP::Response->new( 200, 'OK' ) );
+    is( $resp->code, 207, "$label: Response is 'Multi-Status'" );
+    my $xpc = get_xml_context( $resp->content );
+    has_text( $xpc, '/D:multistatus/D:response/D:propstat/D:status', 'HTTP/1.1 200 OK', "$label: Status is correct" );
+    has_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
+        "$label: supports exclusive lock scope"
+    );
+    hasnt_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:shared',
+        "$label: shared lock scope not supported"
+    );
+}
+
+{
     my $label = 'File, bad property';
     my $path = '/test.html';
     my $dav = Net::DAV::Server->new( -filesys => Mock::Filesys->new(), -dbobj => Net::DAV::LockManager::Simple->new() );
@@ -670,7 +736,11 @@ my $parser = XML::LibXML->new();
     );
     has_node( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:exclusive',
-        "$label: supported scopes"
+        "$label: supports exclusive lock scope"
+    );
+    hasnt_node( $xpc,
+        '/D:multistatus/D:response/D:propstat/D:prop/D:supportedlock/D:lockentry/D:lockscope/D:shared',
+        "$label: shared lock scope not supported"
     );
     has_text( $xpc,
         '/D:multistatus/D:response/D:propstat/D:prop/D:getcontenttype',
@@ -783,4 +853,10 @@ sub has_node {
     my ($xpc, $xpath, $label) = @_;
     my @nodes = $xpc->findnodes( $xpath );
     ok ( defined $nodes[0], $label );
+}
+
+sub hasnt_node {
+    my ($xpc, $xpath, $label) = @_;
+    my @nodes = $xpc->findnodes( $xpath );
+    ok ( !defined $nodes[0], $label );
 }
