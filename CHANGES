@@ -1,5 +1,7 @@
 CHANGES file for Net::DAV::Server
 
+1.304 Tue Nov 22 11:00:00 CST 2011
+  - Make propfind handle a direct request for supportedlock property.
 1.303 Thu Aug 4 14:00:00 CDT 2011
   - Allow domain names that start with a digit in virtual user names.
   - Remove UTF8 decode/encode calls that were messing up actual utf8 strings.

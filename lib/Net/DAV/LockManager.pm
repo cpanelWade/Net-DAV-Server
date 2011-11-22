@@ -7,7 +7,7 @@ use File::Spec ();
 use Net::DAV::UUID;
 use Net::DAV::Lock;
 
-our $VERSION = '1.303';
+our $VERSION = '1.304';
 $VERSION = eval $VERSION;
 
 sub new {

@@ -2,7 +2,7 @@ package Net::DAV::UUID;
 
 use strict;
 
-our $VERSION = '1.303';
+our $VERSION = '1.304';
 $VERSION = eval $VERSION;  # convert development version into a simpler version number.
 
 use Digest::SHA1 qw(sha1);
