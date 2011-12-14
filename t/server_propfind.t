@@ -18,13 +18,13 @@ my $parser = XML::LibXML->new();
     package Mock::Filesys;
     sub new {
         return bless {
-            '/' =>               [ 0, 0, 01777, 2, 1, 1, 0,    0, (time)x3, 1024, 1 ],
-            '/foo' =>            [ 0, 0, 01777, 2, 1, 1, 0,    0, (time)x3, 1024, 1 ],
-            '/foo/bar' =>        [ 0, 0, 01777, 2, 1, 1, 0,    0, (time)x3, 1024, 1 ],
-            '/test.html' =>      [ 0, 0, 0666,  1, 1, 1, 0, 1024, (time)x3, 1024, 1 ],
-            '/foo/index.html' => [ 0, 0, 0666,  1, 1, 1, 0, 2048, (time)x3, 1024, 2 ],
-            '/bar' =>            [ 0, 0, 01777, 2, 1, 1, 0,    0, (time)x3, 1024, 1 ],
-            '/テスト' =>         [ 0, 0, 0666,  1, 1, 1, 0,  128, (time)x3, 1024, 1 ],
+            '/' =>               [ 0, 0, 040777, 2, 1, 1, 0,    0, (time)x3, 1024, 1 ],
+            '/foo' =>            [ 0, 0, 040777, 2, 1, 1, 0,    0, (time)x3, 1024, 1 ],
+            '/foo/bar' =>        [ 0, 0, 040777, 2, 1, 1, 0,    0, (time)x3, 1024, 1 ],
+            '/test.html' =>      [ 0, 0, 0666,   1, 1, 1, 0, 1024, (time)x3, 1024, 1 ],
+            '/foo/index.html' => [ 0, 0, 0666,   1, 1, 1, 0, 2048, (time)x3, 1024, 2 ],
+            '/bar' =>            [ 0, 0, 040777, 2, 1, 1, 0,    0, (time)x3, 1024, 1 ],
+            '/テスト' =>         [ 0, 0, 0666,   1, 1, 1, 0,  128, (time)x3, 1024, 1 ],
         };
     }
     sub test {
@@ -34,7 +34,7 @@ my $parser = XML::LibXML->new();
         }
         elsif ( $op eq 'd' ) {
             return unless exists $self->{$path};
-            return (($self->{$path}->[2]&01000) ? 1 : 0);
+            return (($self->{$path}->[2]&040000) ? 1 : 0);
         }
         else {
             die "Operation $op not implemented.";
