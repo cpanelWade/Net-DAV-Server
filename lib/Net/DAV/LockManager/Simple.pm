@@ -4,7 +4,7 @@ use Net::DAV::Lock;
 
 use strict;
 
-our $VERSION = '1.304';
+our $VERSION = '1.305';
 $VERSION = eval $VERSION;
 
 #

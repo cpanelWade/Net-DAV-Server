@@ -1,5 +1,8 @@
 CHANGES file for Net::DAV::Server
 
+1.305 Mon Apr 8 13:55:00 SDT 2013
+  - Fix RT #46865. copy() depth problem and source/target path
+    alteration problem. Patch needed updates to match current code.
 1.304 Tue Nov 22 11:00:00 CST 2011
   - Make propfind handle a direct request for supportedlock property.
 1.303 Thu Aug 4 14:00:00 CDT 2011

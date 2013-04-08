@@ -16,7 +16,7 @@ use XML::LibXML::XPathContext;
 use Net::DAV::LockManager ();
 use Net::DAV::LockManager::DB ();
 
-our $VERSION = '1.304';
+our $VERSION = '1.305';
 $VERSION = eval $VERSION;  # convert development version into a simpler version number.
 
 our %implemented = (
@@ -479,11 +479,8 @@ sub delete {
 
     my $dom = XML::LibXML::Document->new( '1.0', 'utf-8' );
     my @error;
-    foreach my $part (
-        grep { $_ !~ m{/\.\.?$} }
-        map { s{/+}{/}g; $_ }
-        File::Find::Rule::Filesys::Virtual->virtual($fs)->in($path), $path
-      ) {
+    # see rt 46865: files first since rmdir() only removed empty directories
+    foreach my $part ( _get_files($fs, $path), _get_dirs($fs, $path), $path ) {
 
         next unless $fs->test( 'e', $part );
 
@@ -515,6 +512,7 @@ sub delete {
 sub copy {
     my ( $self, $request, $response ) = @_;
     my $path = uri_unescape $request->uri->path;
+    $path =~ s{/+$}{}; # see rt 46865
 
     # need to modify request to pay attention to destination address.
     my $lockreq = _parse_lock_header( $request );
@@ -526,26 +524,19 @@ sub copy {
 
     my $destination = $request->header('Destination');
     $destination = URI->new($destination)->path;
-    my $depth     = $request->header('Depth')     || 0;
+    $destination =~ s{/+$}{}; # see rt 46865
+
+    my $depth     = $request->header('Depth');
+    $depth = '' if !defined $depth;
+
     my $overwrite = $request->header('Overwrite') || 'F';
 
     if ( $fs->test( "f", $path ) ) {
         return $self->_copy_file( $request, $response );
     }
 
-    # it's a good approximation
-    $depth = 100 if defined $depth && $depth eq 'infinity';
-
-    my @files =
-      map { s{/+}{/}g; $_ }
-      File::Find::Rule::Filesys::Virtual->virtual($fs)->file->maxdepth($depth)
-      ->in($path);
-
-    my @dirs = reverse sort
-      grep { $_ !~ m{/\.\.?$} }
-      map { s{/+}{/}g; $_ }
-      File::Find::Rule::Filesys::Virtual->virtual($fs)->directory->maxdepth($depth)
-      ->in($path);
+    my @files = _get_files($fs, $path, $depth);
+    my @dirs  = _get_dirs($fs, $path, $depth);
 
     push @dirs, $path;
     foreach my $dir ( sort @dirs ) {
@@ -872,6 +863,26 @@ sub _supportedlock_child {
     }
 
     return $prop;
+}
+
+sub _get_files {
+    my ($fs, $path, $depth) = @_;
+    reverse map { s{/+}{/}g;s{/$}{}; $_ }
+    (defined $depth && $depth =~ m{\A\d+\z}) ?
+      File::Find::Rule::Filesys::Virtual->virtual($fs)->file->maxdepth($depth)->in($path)
+      : File::Find::Rule::Filesys::Virtual->virtual($fs)->file->in($path)
+      ;
+}
+
+sub _get_dirs {
+    my ($fs, $path, $depth) = @_;
+    return reverse sort
+    grep { $_ !~ m{/\.\.?$} }
+    map { s{/+}{/}g;s{/$}{}; $_ }
+    (defined $depth && $depth =~ m{\A\d+\z}) ?
+       File::Find::Rule::Filesys::Virtual->virtual($fs)->directory->maxdepth($depth)->in($path)
+       : File::Find::Rule::Filesys::Virtual->virtual($fs)->directory->in($path)
+       ;
 }
 
 1;
